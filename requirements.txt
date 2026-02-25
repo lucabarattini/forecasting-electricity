@@ -8,3 +8,4 @@ prophet
 python-dateutil
 requests
 mplfinance
+tqdm
