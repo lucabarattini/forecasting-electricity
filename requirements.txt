@@ -1,0 +1,10 @@
+pyarrow
+pandas
+numpy
+matplotlib
+seaborn
+scikit-learn
+prophet
+python-dateutil
+requests
+mplfinance
