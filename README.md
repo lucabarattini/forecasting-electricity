@@ -54,14 +54,38 @@ Meta's Prophet library is utilized for robust time-series forecasting.
 * Custom regressors are integrated, including the engineered `Temp_National_Avg` and the autoregressive features (`Lag_15min`, `Lag_24h`, `Rolling_Mean_4h`).
 * Similar to the baseline, evaluation is conducted using strict recursive forecasting on a holdout set, and performance is evaluated using Mean Absolute Percentage Error (MAPE), Mean Absolute Error (MAE), and Root Mean Squared Error (RMSE).
 
-## 🛠️ Requirements
+## 🚀 Running the Repo
 
-To run this project, first install the dependencies listed in the `requirements.txt` file:
+### 1. Create a virtual environment
+
+If you are using VS Code, open the Command Palette (`Cmd+Shift+P` / `Ctrl+Shift+P`), select **Python: Create Environment**, and choose **Venv**. VS Code will create a `.venv` folder and activate it automatically in all new terminals.
+
+Alternatively, from the terminal:
+
+```bash
+python -m venv .venv
+source .venv/bin/activate   # macOS/Linux
+.venv\Scripts\activate      # Windows
+```
+
+### 2. Install dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
+### 3. Run the notebooks in order
+
+Open the `notebooks/` folder and execute them sequentially:
+
+| Step | Notebook | Description |
+|------|----------|-------------|
+| 0 | `0_data_preprocessing.ipynb` | Processes raw data, engineers features, fetches weather, outputs `processed_electricity_data.parquet` |
+| 0.5 | `0.5_clustering.ipynb` | Segments clients by behavior and volume, outputs `client_clusters.csv` and `client_size_categories.csv` |
+| 1 | `1_linear_regression.ipynb` | Trains and evaluates the autoregressive Linear Regression baseline |
+| 2 | `2_Prophet.ipynb` | Trains and evaluates the Meta Prophet time-series model |
+
+---
 **Main libraries used:**
 * Data manipulation & computation: `pandas`, `numpy`, `pyarrow`
 * Visualization: `matplotlib`, `seaborn`
