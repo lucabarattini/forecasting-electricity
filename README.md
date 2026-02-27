@@ -11,29 +11,31 @@ forecasting-electricity/
 │
 ├── Datasets/
 │   ├── Electricity Dataset.csv          # Raw electricity load dataset
-│   ├── client_clusters.csv              # Outputs from the clustering phase
-│   ├── client_size_categories.csv       # Outputs from the segmentation phase
-│   └── processed_electricity_data.parquet # Optimized, preprocessed dataset
+│   ├── client_clusters.csv              # Clients divided by clusters
+│   ├── client_size_categories.csv       # Clients divided by category
+│   └── processed_electricity_data.parquet # Processed dataset in .parquet for optimized caching
 │
 ├── notebooks/
 │   ├── 0_data_preprocessing.ipynb       # Feature engineering, weather data fetching, and data reshaping
 │   ├── 0.5_clustering.ipynb             # K-Means clustering for client consumption profiling
 │   ├── 1_linear_regression.ipynb        # Autoregressive Linear Regression baseline model
-│   └── 2_Prophet.ipynb                  # Advanced time-series modeling using Meta's Prophet
+│   └── 2_Prophet.ipynb                  # Time-series modeling using Meta's Prophet open-source library
 │
-├── requirements.txt                     # Python package dependencies
+├── requirements.txt                     # Repo dependencies
 └── README.md                            # Project documentation
 ```
 
 ## 🧠 Approach and Methodology
 
 ### 1. Data Preprocessing & Feature Engineering (`0_data_preprocessing.ipynb`)
-The foundation of the project involves transforming the raw "wide" dataset into a machine-learning-ready "long" format. Key steps include:
+The foundation of the project involves transforming the raw "wide" dataset into a machine-learning-ready "long" format. 
+
+Key steps include:
 * **Temporal Features:** Dynamically extracting Hour, Day, Weekday, and Weekend indicators.
 * **Holiday Effects:** Using `dateutil.easter` to dynamically calculate and map movable and fixed Portuguese national holidays.
 * **Weather Integration:** Making API calls to *Open-Meteo* to fetch historical temperatures for major Portuguese cities (Lisbon, Porto, Faro, Evora). A population-weighted national average temperature is calculated, and Heating Degree Hours (HDH) and Cooling Degree Hours (CDH) are engineered to capture temperature-driven electricity demand.
 * **Data Reshaping:** Melting the dataset from 370 individual client columns into a massive "long" format, strictly downcasting data types and exporting to a highly compressed `Parquet` format to optimize memory.
-* **Segmentation:** Applying Jenks natural breaks optimization to segment clients into *Light*, *Medium*, and *Heavy* consumer categories based on volume.
+* **Segmentation:** Applying Jenks optimization to segment clients into *Light*, *Medium*, and *Heavy* consumer categories based on volume.
 
 ### 2. Client Clustering (`0.5_clustering.ipynb`)
 Because absolute consumption volume varies wildly between a small residential house and a large factory, K-Means clustering is utilized to group clients by their **behavioral consumption patterns** (e.g., 9-to-5 commercial vs. residential). 
@@ -42,7 +44,7 @@ Because absolute consumption volume varies wildly between a small residential ho
 
 ### 3. Baseline Modeling: Linear Regression (`1_linear_regression.ipynb`)
 A Linear Regression model is established as a baseline to determine the predictive power of standard autoregressive features.
-* **Feature Creation:** Lagged variables (`Lag_15min`, `Lag_24h`) and rolling averages (`Rolling_Mean_4h`) are generated to capture historical consumption patterns. Categorical variables are One-Hot Encoded.
+* **Feature Creation:** Lagged variables (`Lag_15min`, `Lag_24h`) and rolling averages (`Rolling_Mean_4h`) are generated to capture historical consumption patterns. Categorical variables are then One-Hot Encoded.
 * **Chronological Split:** The dataset is strictly split chronologically (Train < 2014, Test >= 2014) to prevent data leakage.
 * **Recursive Forecasting:** To simulate real-world conditions, predictions are made step-by-step. The model's own predictions are fed back into the lag and rolling mean features for future steps, preventing the model from "cheating" by looking at actual future values.
 
@@ -54,7 +56,7 @@ Meta's Prophet library is utilized for robust time-series forecasting.
 
 ## 🛠️ Requirements
 
-To run this project, install the dependencies listed in the `requirements.txt` file:
+To run this project, first install the dependencies listed in the `requirements.txt` file:
 
 ```bash
 pip install -r requirements.txt
@@ -62,6 +64,6 @@ pip install -r requirements.txt
 
 **Main libraries used:**
 * Data manipulation & computation: `pandas`, `numpy`, `pyarrow`
-* Visualization: `matplotlib`, `seaborn`, `mplfinance`
+* Visualization: `matplotlib`, `seaborn`
 * Machine Learning & Forecasting: `scikit-learn`, `prophet`
 * Utilities: `python-dateutil`, `requests`, `tqdm`
