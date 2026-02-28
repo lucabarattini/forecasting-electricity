@@ -64,6 +64,9 @@ Meta's Prophet library is utilized for robust time-series forecasting.
 * Custom regressors are integrated, including the engineered `Temp_National_Avg` and the autoregressive features (`Lag_15min`, `Lag_24h`, `Rolling_Mean_4h`).
 * Similar to the baseline, evaluation is conducted using strict recursive forecasting on a holdout set, and performance is evaluated using Mean Absolute Percentage Error (MAPE), Mean Absolute Error (MAE), and Root Mean Squared Error (RMSE).
 
+### 5. SARIMAX Rough Implementation (`3_sarimax.ipynb`)
+This is a first attempt at implementing SARIMAX for a single sampled client. The notebook covers data preparation, exploratory analysis (decomposition, ACF/PACF, ADF stationarity test), and manual parameter selection (p=1, d=0, q=1, P=1, D=0, Q=1, s=96) based on the ACF/PACF plots, as `auto_arima` proved infeasible due to the high computational cost of fitting on high-frequency data with a large seasonal period (`s=96`). Model fitting was also constrained by memory and runtime limitations, requiring the training window to be reduced to 2 months of data. Full model fitting, forecasting, and evaluation remain to be completed.
+
 ## 🚀 Running the Repo
 
 ### 1. Create a virtual environment
