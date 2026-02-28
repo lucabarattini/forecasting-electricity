@@ -1,4 +1,17 @@
-# Electricity Load Forecasting ⚡
+<div align="center">
+
+# ⚡️ Forecasting Electricity
+
+<img src="/Images/Logo.png" width="670" alt="Logo">
+<br>
+<br>
+
+![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)
+![Python](https://img.shields.io/badge/Python-3.10%2B-blue?style=for-the-badge&logo=python&logoColor=white)
+![scikit-learn](https://img.shields.io/badge/ML-scikit--learn-orange?style=for-the-badge&logo=scikit-learn&logoColor=white)
+![Prophet](https://img.shields.io/badge/Forecasting-Prophet-green?style=for-the-badge)
+
+</div>
 
 Welcome to our first project deliverable for the **IEOR 4578** course. 
 
