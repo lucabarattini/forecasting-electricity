@@ -7,6 +7,7 @@ scikit-learn
 prophet
 python-dateutil
 requests
-mplfinance
 tqdm
 jenkspy
+statsmodels
+pmdarima
