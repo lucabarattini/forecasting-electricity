@@ -1,7 +1,6 @@
 <div align="center">
-<img src="/Images/Logo.png" width="670" alt="Logo">
-<br>
-<br>
+<img src="Images/Logo.png" width="670" alt="Logo">
+<br><br>
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)
 ![Python](https://img.shields.io/badge/Python-3.10%2B-blue?style=for-the-badge&logo=python&logoColor=white)
@@ -10,97 +9,60 @@
 
 </div>
 
-Welcome to our first project deliverable for the **IEOR 4578** course. 
+IEOR 4578 — Electricity load forecasting for 370 Portuguese clients (2011–2015, 15-minute intervals). We preprocess the raw data, cluster clients by consumption behavior, then benchmark three forecasting models on the same 30 clients, same 24-hour test horizon, using MAPE/WMAPE/MAE/RMSE.
 
-This repository contains our evolving machine learning pipeline for forecasting electricity consumption across 370 clients. The project explores end-to-step time-series forecasting, beginning with thorough data preprocessing and feature engineering, followed by client profiling (clustering), and ultimately building predictive models, which currently include a Linear Regression baseline and an advanced Meta Prophet implementation.
+## Repository Structure
 
-## 📂 Repository Structure
-
-```text
+```
 forecasting-electricity/
-│
 ├── Datasets/
-│   ├── Electricity Dataset.csv          # Raw electricity load dataset
-│   ├── client_clusters.csv              # Clients divided by clusters
-│   ├── client_size_categories.csv       # Clients divided by category
-│   └── processed_electricity_data.parquet # Processed dataset in .parquet for optimized caching
+│   ├── Electricity Dataset.csv                 # Raw data (370 clients × 140k timestamps)
+│   ├── processed_electricity_data.parquet      # Output of notebook 0
+│   ├── client_clusters.csv                     # Output of notebook 0.5
+│   └── client_size_categories.csv
 │
 ├── notebooks/
-│   ├── 0_data_preprocessing.ipynb       # Feature engineering, weather data fetching, and data reshaping
-│   ├── 0.5_clustering.ipynb             # K-Means clustering for client consumption profiling
-│   ├── 1_linear_regression.ipynb        # Autoregressive Linear Regression baseline model
-│   └── 2_Prophet.ipynb                  # Time-series modeling using Meta's Prophet open-source library
+│   ├── 0_data_preprocessing.ipynb
+│   ├── 0.5_clustering.ipynb
+│   ├── 1_linear_regression.ipynb
+│   ├── 2_Prophet.ipynb
+│   └── 3_sarimax.ipynb
 │
-├── requirements.txt                     # Repo dependencies
-└── README.md                            # Project documentation
+├── requirements.txt
+└── README.md
 ```
 
-## 🧠 Approach and Methodology
+## Notebooks
 
-### 1. Data Preprocessing & Feature Engineering (`0_data_preprocessing.ipynb`)
-The foundation of the project involves transforming the raw "wide" dataset into a machine-learning-ready "long" format. 
+**0 — Preprocessing**
+Reshapes raw data from wide (370 columns) to long format. Adds temporal features (hour, weekday, holiday), fetches historical weather from Open-Meteo for 4 Portuguese cities (population-weighted average), engineers HDH/CDH from an 18°C comfort threshold, creates lag and rolling features (15min, 24h, 4h rolling mean), trims leading zeros for clients that joined the grid late.
 
-Key steps include:
-* **Temporal Features:** Dynamically extracting Hour, Day, Weekday, and Weekend indicators.
-* **Holiday Effects:** Using `dateutil.easter` to dynamically calculate and map movable and fixed Portuguese national holidays.
-* **Weather Integration:** Making API calls to *Open-Meteo* to fetch historical temperatures for major Portuguese cities (Lisbon, Porto, Faro, Evora). A population-weighted national average temperature is calculated, and Heating Degree Hours (HDH) and Cooling Degree Hours (CDH) are engineered to capture temperature-driven electricity demand.
-* **Data Reshaping:** Melting the dataset from 370 individual client columns into a massive "long" format, strictly downcasting data types and exporting to a highly compressed `Parquet` format to optimize memory.
-* **Segmentation:** Applying Jenks optimization to segment clients into *Light*, *Medium*, and *Heavy* consumer categories based on volume.
+**0.5 — Clustering**
+K-Means (k=5) on normalized 24-hour consumption profiles. Normalization is per-client (Min-Max row-wise) so the algorithm groups by shape, not volume. Produces 5 behavioral clusters (night-shift industrial, daytime commercial, late-evening residential, siesta-split, general commercial) used to break down model performance.
 
-### 2. Client Clustering (`0.5_clustering.ipynb`)
-Because absolute consumption volume varies wildly between a small residential house and a large factory, K-Means clustering is utilized to group clients by their **behavioral consumption patterns** (e.g., 9-to-5 commercial vs. residential). 
-* Data is aggregated to create an "average 24-hour profile" for each client.
-* Min-Max scaling is applied row-wise to eliminate the "volume" effect, isolating the shape of the demand curve before clustering.
+**1 — Linear Regression**
+Baseline model. Trains on all data up to the last 24 hours. Lag/rolling features are recomputed per-client on standardized consumption to prevent scale leakage. Evaluation uses recursive forecasting (model predictions feed back as lag inputs). Metrics are reported in raw kW via per-client inverse transform.
 
-### 3. Baseline Modeling: Linear Regression (`1_linear_regression.ipynb`)
-A Linear Regression model is established as a baseline to determine the predictive power of standard autoregressive features.
-* **Feature Creation:** Lagged variables (`Lag_15min`, `Lag_24h`) and rolling averages (`Rolling_Mean_4h`) are generated to capture historical consumption patterns. Categorical variables are then One-Hot Encoded.
-* **Chronological Split:** The dataset is strictly split chronologically (Train < 2014, Test >= 2014) to prevent data leakage.
-* **Recursive Forecasting:** To simulate real-world conditions, predictions are made step-by-step. The model's own predictions are fed back into the lag and rolling mean features for future steps, preventing the model from "cheating" by looking at actual future values.
+**2 — Prophet**
+Meta's Prophet with Portuguese holidays, temperature regressor, and lag/rolling regressors. `daily_seasonality=False` — the lag regressors already encode the daily consumption shape, so having Prophet also model it via Fourier terms was double-counting and pushing the trend component off (visible as over-prediction in some clusters). `changepoint_prior_scale=0.15` for more flexible trend. Predictions are clipped at 0. Set `DEBUG_MODE = True` to run on 3 clients (~2 min) for fast iteration.
 
-### 4. Advanced Modeling: Prophet (`2_Prophet.ipynb`)
-Meta's Prophet library is utilized for robust time-series forecasting.
-* Built-in country holiday effects are applied (`m.add_country_holidays(country_name='PT')`).
-* Custom regressors are integrated, including the engineered `Temp_National_Avg` and the autoregressive features (`Lag_15min`, `Lag_24h`, `Rolling_Mean_4h`).
-* Similar to the baseline, evaluation is conducted using strict recursive forecasting on a holdout set, and performance is evaluated using Mean Absolute Percentage Error (MAPE), Mean Absolute Error (MAE), and Root Mean Squared Error (RMSE).
+**3 — SARIMAX**
+SARIMAX(1,0,1)(1,0,1,96) fitted per client on a 4-week training window. Parameters selected manually from ACF/PACF plots — `auto_arima` was infeasible at 15-min frequency (s=96). `Hour` was removed from exogenous variables: it's cyclical but was being treated as linear (1–24), misleading the model — the seasonal component (s=96) already captures the daily pattern. Exogenous variables are weekday, weekend/holiday flags, and weather. Set `DEBUG_MODE = True` to run on 3 clients for fast iteration.
 
-### 5. SARIMAX Rough Implementation (`3_sarimax.ipynb`)
-This is a first attempt at implementing SARIMAX for a single sampled client. The notebook covers data preparation, exploratory analysis (decomposition, ACF/PACF, ADF stationarity test), and manual parameter selection (p=1, d=0, q=1, P=1, D=0, Q=1, s=96) based on the ACF/PACF plots, as `auto_arima` proved infeasible due to the high computational cost of fitting on high-frequency data with a large seasonal period (`s=96`). Model fitting was also constrained by memory and runtime limitations, requiring the training window to be reduced to 2 months of data. Full model fitting, forecasting, and evaluation remain to be completed.
+## A note on the test window
 
-## 🚀 Running the Repo
+All three models are evaluated on the same 24-hour holdout: Dec 31, 2014 (New Year's Eve). This is an atypical day, so the reported metrics reflect performance on a single difficult day rather than general accuracy. Results should be interpreted with that caveat in mind.
 
-### 1. Create a virtual environment
-
-If you are using VS Code, open the Command Palette (`Cmd+Shift+P` / `Ctrl+Shift+P`), select **Python: Create Environment**, and choose **Venv**. VS Code will create a `.venv` folder and activate it automatically in all new terminals.
-
-Alternatively, from the terminal:
+## Running
 
 ```bash
 python -m venv .venv
-source .venv/bin/activate   # macOS/Linux
-.venv\Scripts\activate      # Windows
-```
-
-### 2. Install dependencies
-
-```bash
+source .venv/bin/activate   # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### 3. Run the notebooks in order
+Run notebooks in order (0 → 0.5 → 1/2/3). Notebook 0 fetches weather from the Open-Meteo API and outputs the parquet file that all model notebooks depend on.
 
-Open the `notebooks/` folder and execute them sequentially:
+## Evaluation
 
-| Step | Notebook | Description |
-|------|----------|-------------|
-| 0 | `0_data_preprocessing.ipynb` | Processes raw data, engineers features, fetches weather, outputs `processed_electricity_data.parquet` |
-| 0.5 | `0.5_clustering.ipynb` | Segments clients by behavior and volume, outputs `client_clusters.csv` and `client_size_categories.csv` |
-| 1 | `1_linear_regression.ipynb` | Trains and evaluates the autoregressive Linear Regression baseline |
-| 2 | `2_Prophet.ipynb` | Trains and evaluates the Meta Prophet time-series model |
-
----
-**Main libraries used:**
-* Data manipulation & computation: `pandas`, `numpy`, `pyarrow`
-* Visualization: `matplotlib`, `seaborn`
-* Machine Learning & Forecasting: `scikit-learn`, `prophet`
-* Utilities: `python-dateutil`, `requests`, `tqdm`
+All models use the same 30 clients (`random.seed(42)`), same 96-step (24-hour) holdout, metrics in raw kW. Primary metric is **MAPE** (scale-free, comparable across clients of very different sizes). Performance is also broken down by behavioral cluster.
