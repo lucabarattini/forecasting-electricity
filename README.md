@@ -15,6 +15,30 @@ IEOR 4578 — Electricity load forecasting for 370 Portuguese clients (2011–20
 
 ![Demo](<Images/Demo Forecasting Electricity.gif>)
 
+## Graphs
+
+<table>
+<tr>
+    <td><img src="Images/Prophet - 1.png" width="100%"></td>
+    <td><img src="Images/Sarimax - 1.png" width="100%"></td>
+</tr>
+<tr>
+    <td align="center">Prophet</td>
+    <td align="center">SARIMAX</td>
+</tr>
+</table>
+
+<table>
+<tr>
+    <td><img src="Images/Prophet - 2.png" width="100%"></td>
+    <td><img src="Images/Sarimax - 2.png" width="100%"></td>
+</tr>
+<tr>
+    <td align="center">Prophet</td>
+    <td align="center">SARIMAX</td>
+</tr>
+</table>
+
 ## Repository Structure
 
 ```
@@ -70,27 +94,3 @@ Run notebooks in order (0 → 0.5 → 1/2/3). Notebook 0 fetches weather from th
 ## Evaluation
 
 All models use the same 30 clients (`random.seed(42)`), same 96-step (24-hour) holdout, metrics in raw kW. Primary metric is **MAPE** (scale-free, comparable across clients of very different sizes). Performance is broken down by behavioral cluster for all three models.
-
-## Graphs
-
-<table>
-<tr>
-    <td><img src="Images/Prophet - 1.png" width="100%"></td>
-    <td><img src="Images/Sarimax - 1.png" width="100%"></td>
-</tr>
-<tr>
-    <td align="center">Prophet</td>
-    <td align="center">SARIMAX</td>
-</tr>
-</table>
-
-<table>
-<tr>
-    <td><img src="Images/Prophet - 2.png" width="100%"></td>
-    <td><img src="Images/Sarimax - 2.png" width="100%"></td>
-</tr>
-<tr>
-    <td align="center">Prophet</td>
-    <td align="center">SARIMAX</td>
-</tr>
-</table>
