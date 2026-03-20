@@ -1,6 +1,17 @@
 <div align="center">
-<img src="Images/Logo.png" width="670" alt="Logo">
-<br><br>
+
+<table border="0" cellspacing="0" cellpadding="12">
+<tr>
+  <td align="center" width="50%">
+    <img src="Images%20%26%20Videos/Logo.png" width="100%" alt="Logo">
+  </td>
+  <td align="center" width="50%">
+    <img src="Images%20%26%20Videos/Team%20-%20Thumbnail.png" width="100%" alt="Team">
+  </td>
+</tr>
+</table>
+
+<br>
 
 ![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)
 ![Python](https://img.shields.io/badge/Python-3.10%2B-blue?style=for-the-badge&logo=python&logoColor=white)
@@ -13,14 +24,16 @@ IEOR 4578 — Electricity load forecasting for 370 Portuguese clients (2011–20
 
 ## Demo
 
-![Demo](<Images/Demo Forecasting Electricity.gif>)
+<video src="Images%20%26%20Videos/Forecasting - Demo.mp4" controls width="100%"></video>
+
+![Demo](<Images%20%26%20Videos/Demo%20Forecasting%20Electricity.gif>)
 
 ## Graphs
 
 <table>
 <tr>
-    <td><img src="Images/Prophet - 1.png" width="100%"></td>
-    <td><img src="Images/Sarimax - 1.png" width="100%"></td>
+    <td><img src="Images%20%26%20Videos/Prophet%20-%201.png" width="100%"></td>
+    <td><img src="Images%20%26%20Videos/Sarimax%20-%201.png" width="100%"></td>
 </tr>
 <tr>
     <td align="center">Prophet</td>
@@ -30,8 +43,8 @@ IEOR 4578 — Electricity load forecasting for 370 Portuguese clients (2011–20
 
 <table>
 <tr>
-    <td><img src="Images/Prophet - 2.png" width="100%"></td>
-    <td><img src="Images/Sarimax - 2.png" width="100%"></td>
+    <td><img src="Images%20%26%20Videos/Prophet%20-%202.png" width="100%"></td>
+    <td><img src="Images%20%26%20Videos/Sarimax%20-%202.png" width="100%"></td>
 </tr>
 <tr>
     <td align="center">Prophet</td>
