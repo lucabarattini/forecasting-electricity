@@ -1,2 +1,8 @@
 CLAUDE.md
 *.parquet
+venv/
+__pycache__/
+*.pyc
+*.pkl
+agent/artifacts/
+.env
