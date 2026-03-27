@@ -1,19 +1,32 @@
+# ---------------------------------------------------------
+# Core Data & ML
+# ---------------------------------------------------------
 pyarrow
 pandas
 numpy
 matplotlib
 seaborn
 scikit-learn
+statsmodels
 prophet
+joblib
+tqdm
+
+# ---------------------------------------------------------
+# Preprocessing
+# ---------------------------------------------------------
 python-dateutil
 requests
-tqdm
 jenkspy
-statsmodels
-pmdarima
-plotly
-joblib
-langchain-openai
+
+# ---------------------------------------------------------
+# Agentic Chatbot (LangChain + LangGraph)
+# ---------------------------------------------------------
+python-dotenv
 langchain-core
 langgraph
-openai
+
+# LLM providers (install the one you need, or all three)
+langchain-openai
+langchain-anthropic
+langchain-google-genai
