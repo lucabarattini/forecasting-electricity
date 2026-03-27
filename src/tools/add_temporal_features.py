@@ -7,7 +7,22 @@ from src.tools.get_holidays import get_holidays
 
 def add_temporal_features(df):
     """
-    Adds time-based feature columns to the DataFrame based on the 'Date' column.
+    Performs feature engineering by extracting time-based components from the 'Date' column.
+    
+    This function calculates calendar-based features such as hour of the day, day of the week, 
+    and month. It also identifies weekends and national holidays, which are critical 
+    for capturing cyclical consumption patterns and anomalous drops during non-working days.
+
+    Args:
+        df (pd.DataFrame): The input DataFrame. Must contain a 'Date' column in datetime format.
+
+    Returns:
+        pd.DataFrame: A new DataFrame containing the original data plus the following columns:
+            - 'Weekday': Day of the week (1=Monday, 7=Sunday).
+            - 'Hour': Hour of the day (1 to 24).
+            - 'Month': Month of the year (1 to 12).
+            - 'Is_Weekend': Boolean flag (True for Saturday and Sunday).
+            - 'Is_Holiday': Boolean flag (True if the date is a national holiday).
     """
     # Extract unique years from the dataset to calculate holidays dynamically
     unique_years = df['Date'].dt.year.unique()

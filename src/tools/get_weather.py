@@ -3,6 +3,28 @@ import numpy as np
 import requests
 
 def get_national_weather(start_date="2011-01-01", end_date="2015-01-01"):
+    """
+    Fetches historical weather data from Open-Meteo and calculates population-weighted 
+    national metrics (HDH and CDH) for Portugal.
+
+    This function retrieves hourly 2m temperature data for the four major population 
+    centers in Portugal. It computes a national average temperature weighted by the 
+    2011 census population. From this average, it derives Heating Degree Hours (HDH) 
+    and Cooling Degree Hours (CDH) using a base temperature of 18°C, which is the 
+    standard threshold for energy demand and HVAC modeling.
+
+    Args:
+        start_date (str): Start date for the weather archive (YYYY-MM-DD). 
+                          Defaults to "2011-01-01".
+        end_date (str): End date for the weather archive (YYYY-MM-DD). 
+                        Defaults to "2015-01-01".
+
+    Returns:
+        pd.DataFrame: A DataFrame containing:
+            - 'Date': Datetime index/column.
+            - 'HDH': Heating Degree Hours (calculated as max(0, 18 - Temp)).
+            - 'CDH': Cooling Degree Hours (calculated as max(0, Temp - 18)).
+    """
     
     # 2011 population estimates (thousands) for weighting
     # Source: INE Portugal

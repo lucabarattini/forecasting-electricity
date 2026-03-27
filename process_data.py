@@ -1,21 +1,12 @@
 import pandas as pd
 import numpy as np
-from src.tools import add_temporal_features, get_national_weather, clean_clients
+from src.tools import add_temporal_features, get_national_weather, clean_clients, load_raw_data
 
 
 def process_data(input_path, output_path):
     # 1. Load Data
     print("Loading data...")
-    df = pd.read_csv(input_path, sep=';', decimal=',')
-
-    # Rename timestamp column to 'Date' to keep naming consistent
-    df = df.rename(columns={'Unnamed: 0': 'Date'})
-    df['Date'] = pd.to_datetime(df['Date'])
-    df = df.sort_values(by='Date', ascending=True).reset_index(drop=True)
-
-
-    df = df.rename(columns={'Unnamed: 0': 'Date'})
-    df['Date'] = pd.to_datetime(df['Date'])
+    df = load_raw_data(input_path)
     
     # 2. Temporal Features (on wide format to save time)
     print("Adding temporal features...")

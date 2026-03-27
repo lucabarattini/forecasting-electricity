@@ -5,7 +5,18 @@ from dateutil import easter
 
 def get_holidays(years):
     """
-    Generates a set of Portuguese national holiday dates for a list of given years.
+    Generates a comprehensive set of Portuguese national holiday dates for a given list of years.
+    
+    This function calculates both fixed-date holidays and movable religious holidays 
+    (based on the Easter cycle). It also accounts for historical legislative changes, 
+    specifically the suspension of four public holidays by the Portuguese government 
+    during the "Troika" austerity period (2013-2015).
+
+    Args:
+        years (list or numpy.ndarray): A collection of years for which to calculate holidays.
+
+    Returns:
+        set: A set of datetime.date objects representing all identified holidays.
     """
     holidays = set()
     for year in years:

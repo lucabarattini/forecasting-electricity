@@ -2,7 +2,22 @@ import pandas as pd
 import numpy as np
 
 def clean_clients(df):
-    # This cell should take around 10 seconds to run
+    """
+    Cleans the dataset by removing leading inactive periods for each client 
+    and filtering out clients that are no longer active in the final month.
+
+    This dual-stage cleaning process ensures the model doesn't train on 
+    'placeholder' zeros before a client was actually connected and prevents 
+    churned clients (those with no recent activity) from skewing the results.
+
+    Args:
+        df (pd.DataFrame): The input 'long' format DataFrame. 
+                           Must contain 'ClientID', 'Date', and 'Consumption' columns.
+
+    Returns:
+        pd.DataFrame: The cleaned DataFrame with trimmed history per client 
+                      and inactive clients removed.
+    """
 
     # PART 1 REMOVE TRIMMING LEADING ZEROS
     print("Trimming leading zeros (finding actual start date for each client)...")
