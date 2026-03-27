@@ -107,3 +107,30 @@ Run notebooks in order (0 → 0.5 → 1/2/3). Notebook 0 fetches weather from th
 ## Evaluation
 
 All models use the same 30 clients (`random.seed(42)`), same 96-step (24-hour) holdout, metrics in raw kW. Primary metric is **MAPE** (scale-free, comparable across clients of very different sizes). Performance is broken down by behavioral cluster for all three models.
+
+## Forecasting Agent
+
+We built a terminal chatbot using LangChain and a Groq-hosted LLM (Llama 3.3 70B).
+
+The agent allows users to query electricity consumption forecasts in plain English. Given a client ID and a forecast horizon, it automatically calls the models, runs recursive predictions at 15-minute resolution starting from 2015-01-01, and returns the results for each model.
+
+### Structure
+
+- `agent/train_and_save.py` — trains all three models (LR, Prophet, SARIMAX) per client and saves them as artifacts to disk. Run once before using the chatbot.
+- `agent/models/predict.py` — inference module that loads saved artifacts and runs predictions for a given client and horizon.
+- `agent/chatbot.py` — LangChain agent with a natural language interface. Parses user messages, calls the forecasting tools, and returns results.
+
+### Usage
+```bash
+cd agent
+pip install -r requirements_agent.txt
+python train_and_save.py --clients MT_001 MT_315
+python chatbot.py
+```
+
+Example query:
+```
+I want the forecast for client 315 for a 24-hour horizon
+```
+
+Demo YouTube link: https://youtu.be/2cXAN4B30EQ
