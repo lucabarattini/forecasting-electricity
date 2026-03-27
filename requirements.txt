@@ -12,3 +12,8 @@ jenkspy
 statsmodels
 pmdarima
 plotly
+joblib
+langchain-openai
+langchain-core
+langgraph
+openai
