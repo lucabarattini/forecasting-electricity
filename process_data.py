@@ -60,4 +60,4 @@ def process_data(input_path, output_path):
     print("Done!")
 
 if __name__ == "__main__":
-    process_data("../../Datasets/raw_data.csv", "../../Datasets/processed_data.parquet")
+    process_data("../../Datasets/Electricity Dataset.csv", "../../Datasets/processed_electricity_data.parquet")
