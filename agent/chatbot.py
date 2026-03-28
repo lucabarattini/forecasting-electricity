@@ -1,10 +1,13 @@
 """
-Terminal chatbot for electricity forecasting
-Run: python chatbot.py
+agent/chatbot.py
+----------------
+Terminal chatbot for unified electricity forecasting (LR, Prophet, SARIMAX, NST).
+Handles Cluster mapping and model/mode selection via LLM tools.
 """
 from __future__ import annotations
 import os, warnings
 import pandas as pd
+from dotenv import load_dotenv
 warnings.filterwarnings("ignore")
 
 from langchain_openai import ChatOpenAI
@@ -12,10 +15,9 @@ from langchain_core.tools import tool
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 from langgraph.prebuilt import create_react_agent
 
-# from inference.predict import predict_linear_regression, predict_prophet, predict_sarimax
-from inference.predict import predict_linear_regression, predict_prophet
+from inference.predict import predict_power
 
-# ── dataset ──────────────────────────────────────────────────────────────────
+# DATASET
 _df: pd.DataFrame | None = None
 
 def get_df() -> pd.DataFrame:
@@ -23,78 +25,88 @@ def get_df() -> pd.DataFrame:
         raise RuntimeError("Dataset not loaded.")
     return _df
 
-# ── tools ─────────────────────────────────────────────────────────────────────
+# TOOLS 
 
 @tool
-def run_linear_regression(client_id: str, horizon_hours: int) -> str:
-    """Forecast electricity consumption using Linear Regression.
+def run_forecast(client_id: str, model: str = "lr", mode: str = "day_ahead", horizon_hours: int = 48) -> str:
+    """Forecast electricity consumption using a specific model and operational mode.
     Args:
         client_id: Client identifier e.g. MT_001
-        horizon_hours: Number of hours to forecast e.g. 48
+        model: Model type ('lr', 'prophet', 'sarimax', 'nst')
+        mode: Mode ('day_ahead', 'long_term')
+        horizon_hours: Number of hours to forecast (default 48)
     """
-    return predict_linear_regression(client_id, horizon_hours, get_df()).to_summary()
+    # --- AUTO-FORMAT CLIENT ID ---
+    client_id = str(client_id).strip().upper()
+    if client_id.isdigit():
+        client_id = f"MT_{int(client_id):03d}"
+    elif client_id.startswith("MT_"):
+        parts = client_id.split("_")
+        if len(parts) == 2 and parts[1].isdigit():
+            client_id = f"MT_{int(parts[1]):03d}"
+    # -----------------------------
+    
+    try:
+        df = get_df()
+        result = predict_power(client_id, model, mode, df, horizon_hours)
+        return result.to_summary()
+    except Exception as e:
+        return f"[Error] Forecast failed for {client_id}: {str(e)}"
 
-@tool
-def run_prophet(client_id: str, horizon_hours: int) -> str:
-    """Forecast electricity consumption using Prophet.
-    Args:
-        client_id: Client identifier e.g. MT_001
-        horizon_hours: Number of hours to forecast e.g. 48
-    """
-    return predict_prophet(client_id, horizon_hours, get_df()).to_summary()
+# SYSTEM PROMPT 
+SYSTEM = """You are an Expert Energy Analyst AI. 
 
-# @tool
-# def run_sarimax(client_id: str, horizon_hours: int) -> str:
-#     """Forecast electricity consumption using SARIMAX.
-#     Args:
-#         client_id: Client identifier e.g. MT_001
-#         horizon_hours: Number of hours to forecast e.g. 48
-#     """
-#     return predict_sarimax(client_id, horizon_hours, get_df()).to_summary()
+Your objective is to provide actionable electricity consumption forecasts for a portfolio of Portuguese clients (IDs: MT_001 to MT_370) based on historical data (2011-2014) to predict 2015.
 
-# ── system prompt ─────────────────────────────────────────────────────────────
+TOOL USAGE STRATEGY:
+When a user requests a forecast, ALWAYS invoke the `run_forecast` tool. 
+Unless specified otherwise by the user, run the tool TWICE to provide a comparative benchmark:
+1. Run a baseline model (model='lr' or 'prophet').
+2. Run an advanced model (model='sarimax' or 'nst').
 
-SYSTEM = """You are an electricity consumption forecasting assistant.
+PARAMETERS:
+- `mode`: Use 'day_ahead' (horizon 24-48h) for operational spot-market queries. Use 'long_term' (horizon 720h+) for hedging/budgeting queries.
+- `client_id`: Must be strictly formatted as MT_XXX (e.g., MT_013, MT_328). Auto-correct user input if necessary.
 
-When the user asks for a forecast:
-1. Call BOTH tools (run_linear_regression, run_prophet) for EACH client mentioned unless the user specifies otherwise.
-2. Carefully analyze the tool outputs. Look at the total kilowatts, average kilowatts, and the time of the peak consumption.
-3. Present the numbers cleanly, but THEN provide a brilliant, professional Energy Analyst interpretation of the data. Explain what the peak time implies about the client's behavior (e.g. evening peak = residential, daytime peak = commercial/industrial). Compare the results from the models if there are multiple. Add business value to your response.
+RESPONSE FORMAT:
+1. **Executive Summary**: 1-2 sentences summarizing the request.
+2. **Forecast Data**: Use clean Markdown lists/tables to display Total kWh, Average kW, and Peak kW for each model.
+3. **Analyst Interpretation**: 
+   - Explain *why* the models might differ (e.g., NST captures non-linear anomalies better than LR).
+   - Infer the consumer's behavioral profile (e.g., Residential vs. Daytime Business) based on their peak consumption hours.
 
-Rules:
-- The dataset covers 2011-2014. All forecasts start from 2015-01-01.
-- There are 370 clients in total, from MT_001 up to MT_370.
-- Client IDs must be formatted like MT_001, MT_002... MT_370. If the user says 'client 2', you MUST use 'MT_002'.
-- Never skip a model. Never skip a client.
-- If a tool returns an error, show it and continue with the others."""
+If a tool returns an error (e.g., "Artifact not found"), gracefully inform the user and suggest an alternative model or mode."""
 
-# ── main ──────────────────────────────────────────────────────────────────────
+# Always load environment variables from .env
+load_dotenv()
+
+# ── MAIN ─
 
 def main():
     global _df
 
-    api_key = os.environ.get("OPENAI_API_KEY")
+    api_key = os.environ.get("OPENAI_KEY")
     if not api_key:
-        raise EnvironmentError("OPENAI_API_KEY not set...")
+        print("[Error] OPENAI_KEY not found in environment.")
+        return
 
     print("Loading dataset...")
-    _df = pd.read_parquet(
-        "../Datasets/processed_electricity_data.parquet",
-        engine="pyarrow"
-    )
-    _df["Is_Weekend"] = _df["Is_Weekend"].astype(int)
-    _df["Is_Holiday"] = _df["Is_Holiday"].astype(int)
-    _df["Date"]       = pd.to_datetime(_df["Date"])
-    _df = _df.sort_values(["ClientID","Date"]).reset_index(drop=True)
-    print(f"Ready — {_df['ClientID'].nunique()} clients loaded.\n")
+    # Using relative path from agent/ directory
+    parquet_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "Datasets", "processed_electricity_data.parquet")
+    
+    try:
+        _df = pd.read_parquet(parquet_path, engine="pyarrow")
+        print(f"Ready — {_df['ClientID'].nunique()} clients mapped to clusters.\n")
+    except Exception as e:
+        print(f"[Critical Error] Could not load dataset at {parquet_path}: {e}")
+        return
 
     llm = ChatOpenAI(model="gpt-4o-mini", api_key=api_key, temperature=0)
-    tools = [run_linear_regression, run_prophet]
+    tools = [run_forecast]
     agent = create_react_agent(llm, tools)
 
     chat_history = []
-
-    print("Electricity Forecast Chatbot  (type 'exit' to quit)")
+    print("Electricity Analyst Bot  - (type 'exit' to quit)")
 
     while True:
         try:
