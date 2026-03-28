@@ -485,15 +485,18 @@ def predict_models(cluster_models, train_agg, test_agg, test_raw, client_scalers
     test_raw = test_raw.merge(global_forecasts, on=['Cluster', 'Date'], how='left')
     
     test_raw['Predicted_kW'] = np.nan
+    test_raw['Actual_kW'] = test_raw['Consumption']
+    
     for client in tqdm(test_raw['ClientID'].unique(), desc="Un-scaling Clients"):
         mask = test_raw['ClientID'] == client
         if mask.any() and client in client_scalers:
             scaler = client_scalers[client]
             preds_scaled = test_raw.loc[mask, 'Predicted_Consumption_Scaled'].values.reshape(-1, 1)
+            
+            # Se abbiamo previsioni valide, procediamo con l'inverse scaling
             if not np.isnan(preds_scaled).any():
                 unscaled = scaler.inverse_transform(preds_scaled).flatten()
                 test_raw.loc[mask, 'Predicted_kW'] = np.maximum(unscaled, 0)
-                test_raw.loc[mask, 'Actual_kW'] = test_raw.loc[mask, 'Consumption']
                 
     return test_raw
 
