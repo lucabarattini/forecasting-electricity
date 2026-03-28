@@ -22,7 +22,7 @@ def load_raw_data(input_path):
     if 'Unnamed: 0' in df.columns:
         df = df.rename(columns={'Unnamed: 0': 'Date'})
 
-    df['Date'] = pd.to_datetime(df['Date'], dayfirst=True)
+    df['Date'] = pd.to_datetime(df['Date'], format='mixed')
     df = df.sort_values(by='Date', ascending=True).reset_index(drop=True)
     df = df.drop_duplicates(subset='Date').reset_index(drop=True)
     

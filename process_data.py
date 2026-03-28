@@ -1,4 +1,7 @@
 from src.tools import add_temporal_features, get_national_weather, clean_clients, load_raw_data, add_lags_and_rolling
+import pandas as pd
+import numpy as np
+import os
 
 def process_data(input_path, output_path):
     """
@@ -52,4 +55,7 @@ def process_data(input_path, output_path):
     print("Done!")
 
 if __name__ == "__main__":
-    process_data("../../Datasets/Electricity Dataset.csv", "../../Datasets/processed_electricity_data.parquet")
+    base_path = os.path.dirname(__file__)
+    input_p = os.path.join(base_path, "Datasets", "Electricity Dataset.csv")
+    output_p = os.path.join(base_path, "Datasets", "processed_electricity_data.parquet")
+    process_data(input_p, output_p)
