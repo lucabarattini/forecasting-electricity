@@ -356,8 +356,7 @@ def train_models(train_agg, regressors, params=None):
     for cluster_id in unique_clusters:
         print(f"\nTraining Cluster {cluster_id}")
         df_c = train_agg[train_agg['Cluster'] == cluster_id].set_index('Date').sort_index()
-        # Ensure 1h resample
-        df_c = df_c.resample('1h').mean().ffill().dropna()
+        df_c = df_c[regressors].resample('1h').mean().ffill().dropna()
         
         val_size = max(int(len(df_c) * 0.1), p['SEQ_LEN'] + p['PRED_LEN'] + 1)
         train_data_np = df_c.values[:-val_size]
@@ -436,9 +435,12 @@ def predict_models(cluster_models, train_agg, test_agg, test_raw, client_scalers
         print(f"Generating forecasts for Cluster {int(cluster_id)}...")
         model.eval()
         
-        df_train_c = train_agg[train_agg['Cluster'] == cluster_id].set_index('Date').sort_index().resample('1h').mean().ffill().dropna()
-        df_test_c  = test_agg[test_agg['Cluster'] == cluster_id].set_index('Date').sort_index().resample('1h').mean().ffill().dropna()
+        df_train_c = train_agg[train_agg['Cluster'] == cluster_id].set_index('Date').sort_index()
+        df_train_c = df_train_c[regressors].resample('1h').mean().ffill().dropna()
         
+        df_test_c = test_agg[test_agg['Cluster'] == cluster_id].set_index('Date').sort_index()
+        df_test_c = df_test_c[regressors].resample('1h').mean().ffill().dropna()
+
         full_scaled = np.concatenate([df_train_c.values, df_test_c.values], axis=0)
         test_start_idx = len(df_train_c)
         n_test = len(df_test_c)
@@ -464,12 +466,17 @@ def predict_models(cluster_models, train_agg, test_agg, test_raw, client_scalers
 
         if all_preds:
             forecast_scaled = np.concatenate(all_preds, axis=0)[:n_test]
+            
+            start_date = df_test_c.index[0]
+            safe_dates = pd.date_range(start=start_date, periods=len(forecast_scaled), freq='1h')
+            
             fcst_hourly = pd.DataFrame({
                 'Cluster': cluster_id,
-                'Date': df_test_c.index[:len(forecast_scaled)],
+                'Date': safe_dates,
                 'Predicted_Consumption_Scaled': forecast_scaled[:, 0]
             }).set_index('Date')
             
+            # Resample a 15 min per coprire l'intero segmento
             fcst_15min = fcst_hourly.resample('15min').ffill().reset_index()
             all_cluster_forecasts.append(fcst_15min)
             
