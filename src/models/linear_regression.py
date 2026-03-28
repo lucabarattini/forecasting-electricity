@@ -160,12 +160,6 @@ def evaluate_models(test, client_scalers):
         .sum()
         .reset_index()
     )
-    cluster_eval = (
-        test.dropna(subset=['Actual_kW', 'Predicted_kW'])
-        .groupby(['Cluster', 'Date'], observed=True)[['Actual_kW', 'Predicted_kW']]
-        .sum()
-        .reset_index()
-    )
 
     summary = compute_cluster_metrics(cluster_eval)
 
