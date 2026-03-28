@@ -10,7 +10,6 @@ import pandas as pd
 import numpy as np
 
 from src.tools import add_temporal_features, get_national_weather, clean_clients, load_raw_data, add_lags_and_rolling, apply_profile_clustering, apply_volume_clustering
-from scripts.split_and_cluster import split_and_save
 
 def process_data(input_path, output_path):
     """
@@ -79,8 +78,3 @@ if __name__ == "__main__":
     input_p = os.path.join(PROJECT_ROOT, "Datasets", "Electricity Dataset.csv")
     output_p = os.path.join(PROJECT_ROOT, "Datasets", "processed_electricity_data.parquet")
     process_data(input_p, output_p)
-    
-    # Run the split step automatically after processing
-    print("\nStarting automated Train/Test split...")
-    output_dir = os.path.join(PROJECT_ROOT, "Datasets")
-    split_and_save(input_path=output_p, output_dir=output_dir, cutoff_year=2014)
