@@ -12,7 +12,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-
+from src.tools.evaluation import mape, wmape
 
 def plot_cluster_portfolio(
     cluster_eval: pd.DataFrame,
@@ -84,19 +84,12 @@ def plot_cluster_portfolio(
 def analyze_time_periods(
     test: pd.DataFrame,
     n_bins: int = 4,
-) -> None:
+) -> pd.DataFrame:
     """
-    Break the test set into equal-length time periods and visualise the spread
-    of Absolute Percentage Error (APE) and Absolute Error (kW) across periods.
-
-    Parameters
-    ----------
-    test : pd.DataFrame
-        Test DataFrame with columns ['Date', 'Actual_kW', 'Predicted_kW'].
-        Rows where either column is NaN are dropped automatically.
-    n_bins : int, optional
-        Number of time periods to split the test window into. Default is 4.
+    Calculates MAPE/WMAPE per period using centralized metrics and visualizes 
+    the error distribution via boxplots.
     """
+    # 1. Data Preparation & Binning
     df_eval = test.dropna(subset=["Actual_kW", "Predicted_kW"]).copy()
     df_eval = df_eval.sort_values("Date")
 
@@ -108,27 +101,23 @@ def analyze_time_periods(
     ]
     df_eval["Time_Period"] = pd.cut(df_eval["Date"], bins=n_bins, labels=dynamic_labels)
 
-    portfolio_ts = (
-        df_eval.groupby(["Date", "Time_Period"], observed=True)[["Actual_kW", "Predicted_kW"]]
-        .sum()
-        .reset_index()
-    )
-    portfolio_ts["Abs_Error"] = np.abs(portfolio_ts["Actual_kW"] - portfolio_ts["Predicted_kW"])
-    portfolio_ts["APE"] = (portfolio_ts["Abs_Error"] / portfolio_ts["Actual_kW"]) * 100
+    # 2. Compute Summary Table (using centralized metrics)
+    records = []
+    for period, group in df_eval.groupby("Time_Period", observed=True):
+        records.append({
+            "Time_Period": period,
+            "MAPE": round(mape(group["Actual_kW"].values, group["Predicted_kW"].values), 2),
+            "WMAPE": round(wmape(group["Actual_kW"].values, group["Predicted_kW"].values), 2)
+        })
+    summary_df = pd.DataFrame(records).set_index("Time_Period")
 
-    print("\n--- PORTFOLIO PERFORMANCE BY TIME PERIOD (Aggregated) ---")
-    portfolio_wmape = portfolio_ts.groupby("Time_Period", observed=True).apply(
-        lambda x: (x["Abs_Error"].sum() / x["Actual_kW"].sum()) * 100
-    )
-    for period, wmape_val in portfolio_wmape.items():
-        avg_mape = portfolio_ts[portfolio_ts["Time_Period"] == period]["APE"].mean()
-        print(f"  {period}:   WMAPE = {wmape_val:.2f}% | MAPE = {avg_mape:.2f}%")
-
+    # 3. Point-wise Error Calculation (needed for Boxplots)
     df_eval["Abs_Error"] = np.abs(df_eval["Actual_kW"] - df_eval["Predicted_kW"])
     mask_ape = df_eval["Actual_kW"] > 0.1
     df_ape = df_eval[mask_ape].copy()
     df_ape["APE"] = (df_ape["Abs_Error"] / df_ape["Actual_kW"]) * 100
 
+    # 4. Visualization
     fig, axes = plt.subplots(1, 2, figsize=(16, 6))
 
     sns.boxplot(data=df_ape, x="Time_Period", y="APE", ax=axes[0], showfliers=False)
@@ -145,3 +134,5 @@ def analyze_time_periods(
 
     plt.tight_layout()
     plt.show()
+
+    return summary_df

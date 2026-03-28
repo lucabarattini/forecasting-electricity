@@ -29,7 +29,7 @@ PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(_
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
-from src.tools.evaluation import compute_cluster_metrics, print_global_metrics
+from src.tools.evaluation import compute_cluster_metrics
 from src.tools.visualization import plot_cluster_portfolio, analyze_time_periods
 
 def load_processed_data(file_path):
@@ -242,9 +242,6 @@ def evaluate_models(test_raw):
     ) * 100
 
     summary = compute_cluster_metrics(portfolio_eval)
-    print("\n--- SARIMAX PERFORMANCE BY CLUSTER (BUSINESS ORIENTED) ---\n")
-    print(summary)
-    print_global_metrics(portfolio_eval)
 
     return portfolio_eval, summary
 

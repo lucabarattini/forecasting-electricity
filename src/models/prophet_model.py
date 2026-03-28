@@ -26,7 +26,7 @@ PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(_
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
-from src.tools.evaluation import compute_cluster_metrics, print_global_metrics
+from src.tools.evaluation import compute_cluster_metrics,
 from src.tools.visualization import plot_cluster_portfolio, analyze_time_periods
 
 # Suppress Prophet/cmdstanpy verbose logging
@@ -198,10 +198,11 @@ def predict_models(cluster_models, test_agg, test_raw, client_scalers, regressor
 def evaluate_models(test_raw):
     """
     Computes business-oriented performance metrics (MAPE/WMAPE) at portfolio level.
+    Delegates all mathematical logic to the centralized evaluation module.
     """
     print("\nEvaluating Portfolio Performance...")
     
-    # Portfolio aggregation by datetime
+    # Portfolio aggregation by Cluster and Date
     portfolio_eval = (
         test_raw.dropna(subset=['Actual_kW', 'Predicted_kW'])
         .groupby(['Cluster', 'Date'], observed=True)[['Actual_kW', 'Predicted_kW']]
@@ -209,16 +210,8 @@ def evaluate_models(test_raw):
         .reset_index()
     )
     
-    portfolio_eval['Abs_Error'] = np.abs(portfolio_eval['Actual_kW'] - portfolio_eval['Predicted_kW'])
-    mask_nonzero = portfolio_eval['Actual_kW'] > 0.1
-    portfolio_eval.loc[mask_nonzero, 'Perc_Error'] = (
-        portfolio_eval.loc[mask_nonzero, 'Abs_Error'] / portfolio_eval.loc[mask_nonzero, 'Actual_kW']
-    ) * 100
-
+    # Metrics Calculation via centralized tools
     summary = compute_cluster_metrics(portfolio_eval)
-    print("\n--- PROPHET PERFORMANCE BY CLUSTER (BUSINESS ORIENTED) ---\n")
-    print(summary)
-    print_global_metrics(portfolio_eval)
 
     return portfolio_eval, summary
 
@@ -227,7 +220,6 @@ def save_prophet_artifacts(cluster_models, client_scalers, scaler_weather, regre
         artifacts_dir = os.path.join(PROJECT_ROOT, 'agent', 'artifacts')
     os.makedirs(artifacts_dir, exist_ok=True)
     
-    # Salviamo l'artefatto con un nome che indica la modalità
     file_name = f"prophet_cluster_{mode}.pkl"
     path = os.path.join(artifacts_dir, file_name)
     
@@ -264,8 +256,5 @@ def run_prophet_pipeline(file_path, mode='long_term', plot=False):
 if __name__ == "__main__":
     DATA_PATH = os.path.join(PROJECT_ROOT, "Datasets", "processed_electricity_data.parquet")
     
-    print("=== RUNNING LONG TERM FORECAST ===")
     run_prophet_pipeline(DATA_PATH, mode='long_term', plot=False)
-    
-    print("\n=== RUNNING DAY AHEAD FORECAST ===")
     run_prophet_pipeline(DATA_PATH, mode='day_ahead', plot=False)

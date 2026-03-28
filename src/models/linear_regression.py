@@ -1,10 +1,17 @@
 import os
+import sys
 import numpy as np
 import pandas as pd
 from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import StandardScaler
 from tqdm import tqdm
 import joblib
+
+# Ensure project root is in sys.path for absolute imports
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.dirname(os.path.dirname(CURRENT_DIR))
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
 
 from src.tools.evaluation import compute_cluster_metrics
 from src.tools.visualization import plot_cluster_portfolio, analyze_time_periods
@@ -103,7 +110,7 @@ def train_models(X_train, y_train, train):
     return cluster_models
 
 def predict_models(cluster_models, test, X_test, client_scalers):
-    print("Predicting on Test Set (Vectorized Day-Ahead)...")
+    print("Predicting on Test Set...")
     test['Predicted_Consumption_Scaled'] = np.nan
 
     for cluster_id, model in cluster_models.items():
@@ -202,8 +209,5 @@ def run_linear_regression_pipeline(file_path, plot=False):
     return cluster_models, test, cluster_eval, summary
 
 if __name__ == "__main__":
-    # Get absolute path to the project root
-    PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     DATA_PATH = os.path.join(PROJECT_ROOT, "Datasets", "processed_electricity_data.parquet")
-    
     run_linear_regression_pipeline(DATA_PATH, plot=True)
