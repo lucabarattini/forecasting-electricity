@@ -1,7 +1,16 @@
-from src.tools import add_temporal_features, get_national_weather, clean_clients, load_raw_data, add_lags_and_rolling, apply_profile_clustering, apply_volume_clustering
+import os
+import sys
+
+# Allow running from anywhere by adding the project root to sys.path
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
+
 import pandas as pd
 import numpy as np
-import os
+
+from src.tools import add_temporal_features, get_national_weather, clean_clients, load_raw_data, add_lags_and_rolling, apply_profile_clustering, apply_volume_clustering
+from scripts.split_and_cluster import split_and_save
 
 def process_data(input_path, output_path):
     """
@@ -67,7 +76,11 @@ def process_data(input_path, output_path):
     print("Done!")
 
 if __name__ == "__main__":
-    base_path = os.path.dirname(__file__)
-    input_p = os.path.join(base_path, "Datasets", "Electricity Dataset.csv")
-    output_p = os.path.join(base_path, "Datasets", "processed_electricity_data.parquet")
+    input_p = os.path.join(PROJECT_ROOT, "Datasets", "Electricity Dataset.csv")
+    output_p = os.path.join(PROJECT_ROOT, "Datasets", "processed_electricity_data.parquet")
     process_data(input_p, output_p)
+    
+    # Run the split step automatically after processing
+    print("\nStarting automated Train/Test split...")
+    output_dir = os.path.join(PROJECT_ROOT, "Datasets")
+    split_and_save(input_path=output_p, output_dir=output_dir, cutoff_year=2014)

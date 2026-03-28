@@ -12,8 +12,8 @@ from langchain_core.tools import tool
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 from langgraph.prebuilt import create_react_agent
 
-# from models.predict import predict_linear_regression, predict_prophet, predict_sarimax
-from models.predict import predict_linear_regression, predict_prophet
+# from inference.predict import predict_linear_regression, predict_prophet, predict_sarimax
+from inference.predict import predict_linear_regression, predict_prophet
 
 # ── dataset ──────────────────────────────────────────────────────────────────
 _df: pd.DataFrame | None = None
