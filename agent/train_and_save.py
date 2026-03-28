@@ -6,16 +6,15 @@ import argparse, os, random, warnings, logging
 import numpy as np
 import pandas as pd
 import joblib
-from sklearn.linear_model import LinearRegression
-from sklearn.preprocessing import StandardScaler
+from statsmodels.tsa.statespace.sarimax import SARIMAX
 from statsmodels.tsa.statespace.sarimax import SARIMAX
 from prophet import Prophet
 
 warnings.filterwarnings("ignore")
 logging.getLogger("cmdstanpy").setLevel(logging.WARNING)
 
-PARQUET_PATH        = r"..\Datasets\processed_electricity_data.parquet"
-ARTIFACTS_DIR       = r".\artifacts"
+PARQUET_PATH        = "../Datasets/processed_electricity_data.parquet"
+ARTIFACTS_DIR       = "./artifacts"
 FORECAST_HORIZON    = 96
 SARIMAX_TRAIN_WEEKS = 2
 SARIMAX_ORDER       = (1, 0, 1)
@@ -35,43 +34,7 @@ def load_data(parquet_path=PARQUET_PATH):
     print(f"  {len(df):,} rows | {df['ClientID'].nunique()} unique clients")
     return df
 
-# Train a linear regression model for a given client. 
-def train_linear_regression(client_id, df_all):
-    df_c = df_all[df_all["ClientID"]==client_id].copy().sort_values("Date")
-    df_c = df_c.dropna(subset=["Lag_15min","Lag_24h","Rolling_Mean_4h"])
 
-    df_model = pd.get_dummies(df_c, columns=["Hour","Weekday","Consumer_Category"], drop_first=True)
-
-    cutoff = df_model["Date"].max() - pd.Timedelta(hours=24)
-    train  = df_model[df_model["Date"] < cutoff].copy()
-
-    weather_cols   = ["Temp_National_Avg","HDH","CDH"]
-    scaler_weather = StandardScaler()
-    train[weather_cols] = scaler_weather.fit_transform(train[weather_cols])
-
-    scaler_target = StandardScaler()
-    train["Consumption_Scaled"]      = scaler_target.fit_transform(train[["Consumption"]]).flatten()
-    train["Lag_15min_Scaled"]        = scaler_target.transform(train[["Lag_15min"]].values.reshape(-1,1)).flatten()
-    train["Lag_24h_Scaled"]          = scaler_target.transform(train[["Lag_24h"]].values.reshape(-1,1)).flatten()
-    train["Rolling_Mean_4h_Scaled"]  = scaler_target.transform(train[["Rolling_Mean_4h"]].values.reshape(-1,1)).flatten()
-    exclude = {"ClientID","Date","DayMonth","Consumption","Consumption_Scaled",
-            "Lag_15min","Lag_24h","Rolling_Mean_4h"}
-    feature_cols = [c for c in train.columns if c not in exclude]
-
-    X_train = train[feature_cols].fillna(0)
-    y_train = train["Consumption_Scaled"]
-
-    model = LinearRegression()
-    model.fit(X_train, y_train)
-    print(f"    LR trained on {len(feature_cols)} features, {len(X_train)} rows")
-
-    return {
-        "model": model,
-        "scaler_target": scaler_target,
-        "scaler_weather": scaler_weather,
-        "feature_cols": feature_cols,
-        "history_scaled": train["Consumption_Scaled"].values.tolist(),
-    }
 
 # Train Prophet model for a given client. 
 def train_prophet(client_id, df_all):
@@ -155,16 +118,7 @@ def train_all(clients, df, force=False):
         print(f"\n{'─'*50}")
         print(f"  Client: {client_id}")
 
-        if force or not artifact_exists(client_id,"lr"):
-            try:
-                save_artifact(client_id,"lr",train_linear_regression(client_id,df))
-                results["lr"].append(client_id)
-                print(f"  [LR]      saved")
-            except Exception as e:
-                print(f"  [LR]      FAILED: {e}")
-                results["failed"].append(("lr",client_id,str(e)))
-        else:
-            print(f"  [LR]      already exists (skip)")
+        print(f"  [LR]      Managed by analytical cluster pipeline")
 
         if force or not artifact_exists(client_id,"prophet"):
             try:

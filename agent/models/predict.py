@@ -125,9 +125,19 @@ def predict_linear_regression(client_id: str, horizon_hours: int,
     n_steps   = len(future_ts)
 
     try:
-        art            = _load_artifact(client_id, "lr")
-        model          = art["model"]
-        scaler_target  = art["scaler_target"]
+        path = os.path.join(ARTIFACTS_DIR, "lr_cluster_models.pkl")
+        if not os.path.exists(path):
+            raise FileNotFoundError("Cluster LR artifact not found. Please run the Linear Regression pipeline first.")
+        
+        art = joblib.load(path)
+        client_clusters = art["client_clusters"]
+        
+        if client_id not in client_clusters:
+            raise KeyError(f"Client {client_id} is not mapped to any cluster in the training data.")
+            
+        cluster_id     = client_clusters[client_id]
+        model          = art["cluster_models"][cluster_id]
+        scaler_target  = art["client_scalers"][client_id]
         scaler_weather = art["scaler_weather"]
         feature_cols   = art["feature_cols"]
 

@@ -6,6 +6,7 @@ import seaborn as sns
 from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import StandardScaler
 from tqdm import tqdm
+import joblib
 
 def load_processed_data(file_path):
     print("Loading processed data...")
@@ -82,7 +83,9 @@ def preprocess_and_split(df_long):
     print(f"Training shape: {X_train.shape}")
     print(f"Testing shape:  {X_test.shape}")
 
-    return train, test, X_train, y_train, X_test, client_scalers
+    feature_cols = X_train.drop(columns=['Cluster'], errors='ignore').columns.tolist()
+
+    return train, test, X_train, y_train, X_test, client_scalers, scaler_weather, feature_cols
 
 def train_models(X_train, y_train, train):
     print("Training Linear Regression models per cluster...")
@@ -247,17 +250,37 @@ def analyze_time_periods(test):
     plt.tight_layout()
     plt.show()
 
-def run_linear_regression_pipeline(file_path):
+def save_cluster_artifacts(cluster_models, client_scalers, scaler_weather, feature_cols, client_clusters, artifacts_dir="../agent/artifacts"):
+    print(f"Saving Cluster Linear Regression artifacts to {artifacts_dir}...")
+    os.makedirs(artifacts_dir, exist_ok=True)
+    
+    artifact = {
+        "cluster_models": cluster_models,
+        "client_scalers": client_scalers,
+        "scaler_weather": scaler_weather,
+        "feature_cols": list(feature_cols),
+        "client_clusters": {k: v for k, v in client_clusters.items()}
+    }
+    
+    path = os.path.join(artifacts_dir, "lr_cluster_models.pkl")
+    joblib.dump(artifact, path)
+    print(f"Successfully saved {path}")
+
+def run_linear_regression_pipeline(file_path, plot=False):
     """
     Complete pipeline to load data, train models, predict, evaluate, and visualize results.
     """
     df_long = load_processed_data(file_path)
-    train, test, X_train, y_train, X_test, client_scalers = preprocess_and_split(df_long)
+    train, test, X_train, y_train, X_test, client_scalers, scaler_weather, feature_cols = preprocess_and_split(df_long)
     cluster_models = train_models(X_train, y_train, train)
     test = predict_models(cluster_models, test, X_test, client_scalers)
     cluster_eval, summary = evaluate_models(test, client_scalers)
     
-    plot_cluster_portfolio(cluster_eval, summary)
-    analyze_time_periods(test)
+    client_clusters = df_long.drop_duplicates(subset=['ClientID']).set_index('ClientID')['Cluster'].to_dict()
+    save_cluster_artifacts(cluster_models, client_scalers, scaler_weather, feature_cols, client_clusters, artifacts_dir=os.path.join(os.path.dirname(__file__), '..', '..', 'agent', 'artifacts'))
+    
+    if plot:
+        plot_cluster_portfolio(cluster_eval, summary)
+        analyze_time_periods(test)
     
     return cluster_models, test, cluster_eval, summary

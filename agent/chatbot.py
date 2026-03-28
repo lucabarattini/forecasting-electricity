@@ -63,7 +63,8 @@ When the user asks for a forecast:
 
 Rules:
 - The dataset covers 2011-2014. All forecasts start from 2015-01-01.
-- Client IDs look like MT_001, MT_315. If the user says 'client 1' use MT_001, 'client 315' use MT_315.
+- There are 370 clients in total, from MT_001 up to MT_370.
+- Client IDs must be formatted like MT_001, MT_002... MT_370. If the user says 'client 2', you MUST use 'MT_002'.
 - Never skip a model. Never skip a client.
 - If a tool returns an error, show it and continue with the others."""
 
@@ -78,7 +79,7 @@ def main():
 
     print("Loading dataset...")
     _df = pd.read_parquet(
-        r"..\Datasets\processed_electricity_data.parquet",
+        "../Datasets/processed_electricity_data.parquet",
         engine="pyarrow"
     )
     _df["Is_Weekend"] = _df["Is_Weekend"].astype(int)
