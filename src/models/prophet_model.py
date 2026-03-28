@@ -26,7 +26,7 @@ PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(_
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
-from src.tools.evaluation import compute_cluster_metrics,
+from src.tools.evaluation import compute_cluster_metrics
 from src.tools.visualization import plot_cluster_portfolio, analyze_time_periods
 
 # Suppress Prophet/cmdstanpy verbose logging

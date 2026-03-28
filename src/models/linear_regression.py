@@ -210,4 +210,4 @@ def run_linear_regression_pipeline(file_path, plot=False):
 
 if __name__ == "__main__":
     DATA_PATH = os.path.join(PROJECT_ROOT, "Datasets", "processed_electricity_data.parquet")
-    run_linear_regression_pipeline(DATA_PATH, plot=True)
+    run_linear_regression_pipeline(DATA_PATH, plot=False)
