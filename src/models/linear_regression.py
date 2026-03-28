@@ -6,7 +6,7 @@ from sklearn.preprocessing import StandardScaler
 from tqdm import tqdm
 import joblib
 
-from src.tools.evaluation import mape, wmape, compute_cluster_metrics, print_global_metrics
+from src.tools.evaluation import compute_cluster_metrics
 from src.tools.visualization import plot_cluster_portfolio, analyze_time_periods
 
 def load_processed_data(file_path):
@@ -160,17 +160,14 @@ def evaluate_models(test, client_scalers):
         .sum()
         .reset_index()
     )
-    cluster_eval['Abs_Error'] = np.abs(cluster_eval['Actual_kW'] - cluster_eval['Predicted_kW'])
-    mask_nonzero = cluster_eval['Actual_kW'] > 0.1
-    cluster_eval.loc[mask_nonzero, 'Perc_Error'] = (
-        cluster_eval.loc[mask_nonzero, 'Abs_Error'] / cluster_eval.loc[mask_nonzero, 'Actual_kW']
-    ) * 100
+    cluster_eval = (
+        test.dropna(subset=['Actual_kW', 'Predicted_kW'])
+        .groupby(['Cluster', 'Date'], observed=True)[['Actual_kW', 'Predicted_kW']]
+        .sum()
+        .reset_index()
+    )
 
-    print("\n--- LINEAR REGRESSION PERFORMANCE BY CLUSTER (BUSINESS ORIENTED) ---\n")
-    # Delegate to shared evaluation helper
     summary = compute_cluster_metrics(cluster_eval)
-    print(summary)
-    print_global_metrics(cluster_eval)
 
     return cluster_eval, summary
 
@@ -209,3 +206,10 @@ def run_linear_regression_pipeline(file_path, plot=False):
         analyze_time_periods(test)
     
     return cluster_models, test, cluster_eval, summary
+
+if __name__ == "__main__":
+    # Get absolute path to the project root
+    PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+    DATA_PATH = os.path.join(PROJECT_ROOT, "Datasets", "processed_electricity_data.parquet")
+    
+    run_linear_regression_pipeline(DATA_PATH, plot=True)

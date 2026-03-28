@@ -95,6 +95,16 @@ def compute_cluster_metrics(cluster_eval: pd.DataFrame) -> pd.DataFrame:
         ['Portfolio_MAPE', 'Portfolio_WMAPE'].
     """
     records = []
+
+    global_mape = mape(cluster_eval["Actual_kW"].values, cluster_eval["Predicted_kW"].values)
+    global_wmape = wmape(cluster_eval["Actual_kW"].values, cluster_eval["Predicted_kW"].values)
+    
+    records.append({
+        "Cluster": "Global",
+        "Portfolio_MAPE":  round(global_mape, 2),
+        "Portfolio_WMAPE": round(global_wmape, 2),
+    })
+
     for cluster_id, group in cluster_eval.groupby("Cluster", observed=True):
         cluster_mape  = mape(group["Actual_kW"].values, group["Predicted_kW"].values)
         cluster_wmape = wmape(group["Actual_kW"].values, group["Predicted_kW"].values)
@@ -106,18 +116,3 @@ def compute_cluster_metrics(cluster_eval: pd.DataFrame) -> pd.DataFrame:
 
     summary = pd.DataFrame(records).set_index("Cluster")
     return summary
-
-
-def print_global_metrics(cluster_eval: pd.DataFrame) -> None:
-    """
-    Print global (all-cluster, all-dates) MAPE and WMAPE to stdout.
-
-    Parameters
-    ----------
-    cluster_eval : pd.DataFrame
-        DataFrame with columns: ['Actual_kW', 'Predicted_kW', 'Abs_Error', 'Perc_Error'].
-    """
-    global_wmape_val = wmape(cluster_eval["Actual_kW"].values, cluster_eval["Predicted_kW"].values)
-    global_mape_val  = cluster_eval["Perc_Error"].mean()
-    print(f"\nGlobal Portfolio MAPE:  {global_mape_val:.2f}%")
-    print(f"Global Portfolio WMAPE: {global_wmape_val:.2f}%")
