@@ -1,8 +1,4 @@
 import pandas as pd
-import numpy as np
-import datetime
-from dateutil import easter
-import requests
 from src.tools.get_holidays import get_holidays
 
 def add_temporal_features(df):
@@ -37,7 +33,7 @@ def add_temporal_features(df):
         'Hour': df['Date'].dt.hour + 1,
 
         # 1 to 12
-        'Month' : df['Date'].dt.month + 1,
+        'Month' : df['Date'].dt.month,
 
         # True if Saturday (5) or Sunday (6)
         'Is_Weekend': df['Date'].dt.dayofweek >= 5,

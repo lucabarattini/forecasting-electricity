@@ -39,6 +39,9 @@ def get_national_weather(start_date="2011-01-01", end_date="2015-01-01"):
 
     all_temps = []
 
+    # Base temperature for energy demand modeling (standard threshold)
+    BASE_TEMP = 18.0
+
     for city, info in cities.items():
         print(f"  Fetching weather for {city}...")
         url = "https://archive-api.open-meteo.com/v1/archive"
@@ -51,6 +54,7 @@ def get_national_weather(start_date="2011-01-01", end_date="2015-01-01"):
             "timezone":   "Europe/Lisbon",
         }
         response = requests.get(url, params=params)
+        response.raise_for_status()  # Ensure the API call was successful
         data = response.json()
 
         weight = info["population"] / total_population
@@ -62,14 +66,16 @@ def get_national_weather(start_date="2011-01-01", end_date="2015-01-01"):
         temp_df["weighted_temp"] = temp_df["temp"] * weight
         all_temps.append(temp_df[["Date", "weighted_temp"]])
 
-    # Sum weighted temperatures across all cities
-    weather_df = all_temps[0].copy()
-    weather_df["Temp_National_Avg"] = sum(df["weighted_temp"] for df in all_temps)
-    weather_df = weather_df[["Date", "Temp_National_Avg"]]
+    # Aggregate all weighted temperatures by summing the lists of DataFrames
+    national_temp = sum(df["weighted_temp"] for df in all_temps)
+    
+    weather_df = pd.DataFrame({
+        "Date": all_temps[0]["Date"],
+        "Temp_National_Avg": national_temp.astype(np.float32)
+    })
 
-    # Heating/Cooling Degree Hours (base 18°C is standard for energy modeling)
-    weather_df["HDH"] = (18 - weather_df["Temp_National_Avg"]).clip(lower=0).astype(np.float32)
-    weather_df["CDH"] = (weather_df["Temp_National_Avg"] - 18).clip(lower=0).astype(np.float32)
-    weather_df["Temp_National_Avg"] = weather_df["Temp_National_Avg"].astype(np.float32)
+    # Calculate Degree Hours using the defined base temperature
+    weather_df["HDH"] = (BASE_TEMP - weather_df["Temp_National_Avg"]).clip(lower=0)
+    weather_df["CDH"] = (weather_df["Temp_National_Avg"] - BASE_TEMP).clip(lower=0)
 
     return weather_df[["Date", "HDH", "CDH"]]

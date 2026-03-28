@@ -17,6 +17,9 @@ def clean_clients(df):
     Returns:
         pd.DataFrame: The cleaned DataFrame with trimmed history per client 
                       and inactive clients removed.
+
+    Note: Clients with zero total consumption across the entire period 
+              are automatically dropped during the trimming stage.
     """
 
     # PART 1 REMOVE TRIMMING LEADING ZEROS
@@ -35,7 +38,7 @@ def clean_clients(df):
     print(f"Trimmed inactive periods. Remaining rows: {len(df)}")
 
     # PART 2 REMOVE INACTIVE CLIENTS
-    print("Removing inactive clients (near 0 consumption in the last 90 days)...")
+    print("Removing inactive clients (near 0 consumption in the last 30 days)...")
 
     # Slelect the last month of data and calculate the total consumption per client
     max_date = df['Date'].max()
@@ -50,7 +53,8 @@ def clean_clients(df):
 
     # Keep only historically active clients
     df = df[df['ClientID'].isin(active_clients)].copy()
-    df['ClientID'] = df['ClientID'].cat.remove_unused_categories()
+    if pd.api.types.is_categorical_dtype(df['ClientID']):
+        df['ClientID'] = df['ClientID'].cat.remove_unused_categories()
     print(f"Removed inactive clients. Remaining rows: {len(df)}")
 
     return df

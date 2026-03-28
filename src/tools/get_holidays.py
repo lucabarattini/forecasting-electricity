@@ -1,5 +1,3 @@
-import pandas as pd
-import numpy as np
 import datetime
 from dateutil import easter
 
@@ -19,6 +17,7 @@ def get_holidays(years):
         set: A set of datetime.date objects representing all identified holidays.
     """
     holidays = set()
+    years = [years] if isinstance(years, int) else years
     for year in years:
         e_day = easter.easter(year)
         good_friday = e_day - datetime.timedelta(days=2)
