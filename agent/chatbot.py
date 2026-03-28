@@ -53,29 +53,81 @@ def run_forecast(client_id: str, model: str = "lr", mode: str = "day_ahead", hor
     except Exception as e:
         return f"[Error] Forecast failed for {client_id}: {str(e)}"
 
+
+
+@tool
+def get_client_info(client_id: str) -> str:
+    """Retrieve historical summary, behavioral cluster, and volume category for a specific client.
+    Args:
+        client_id: Client identifier e.g. MT_001
+    """
+    # --- AUTO-FORMAT CLIENT ID ---
+    client_id = str(client_id).strip().upper()
+    if client_id.isdigit():
+        client_id = f"MT_{int(client_id):03d}"
+    elif client_id.startswith("MT_"):
+        parts = client_id.split("_")
+        if len(parts) == 2 and parts[1].isdigit():
+            client_id = f"MT_{int(parts[1]):03d}"
+    # -----------------------------
+    
+    try:
+        df = get_df()
+        df_c = df[df["ClientID"] == client_id]
+        
+        if df_c.empty:
+            return f"[Error] No data found for client {client_id}. Ensure it is between MT_001 and MT_370."
+            
+        # Extract metadata
+        cluster_id = int(df_c["Cluster"].iloc[0])
+        volume_cat = str(df_c["Consumer_Category"].iloc[0])
+        
+        # Calculate historical metrics
+        mean_kw = round(df_c["Consumption"].mean(), 2)
+        max_kw = round(df_c["Consumption"].max(), 2)
+        total_kwh = round(df_c["Consumption"].sum() * 0.25, 2) # 15-min intervals to kWh
+        
+        # Human-readable cluster names based on our report mapping
+        cluster_map = {
+            0: "Standard Daytime Business",
+            1: "Standard Residential",
+            2: "Extended Commercial / Mixed-Use",
+            3: "Split-Shift / Siesta Profile",
+            4: "Night-Shift Industrial"
+        }
+        behavior = cluster_map.get(cluster_id, f"Cluster {cluster_id}")
+        
+        return (
+            f"--- CLIENT PROFILE: {client_id} ---\n"
+            f"Behavioral Shape : {behavior} (Cluster {cluster_id})\n"
+            f"Volume Tier      : {volume_cat}\n"
+            f"Historical Mean  : {mean_kw} kW per 15-min\n"
+            f"Historical Peak  : {max_kw} kW\n"
+            f"Total Energy Used: {total_kwh:,.0f} kWh (2011-2014)\n"
+        )
+    except Exception as e:
+        return f"[Error] Could not retrieve info for {client_id}: {str(e)}"
+
 # SYSTEM PROMPT 
 SYSTEM = """You are an Expert Energy Analyst AI. 
 
-Your objective is to provide actionable electricity consumption forecasts for a portfolio of Portuguese clients (IDs: MT_001 to MT_370) based on historical data (2011-2014) to predict 2015.
+Your objective is to provide actionable electricity consumption forecasts and historical profiling for a portfolio of Portuguese clients (IDs: MT_001 to MT_370) based on historical data (2011-2014).
 
 TOOL USAGE STRATEGY:
-When a user requests a forecast, ALWAYS invoke the `run_forecast` tool. 
-Unless specified otherwise by the user, run the tool TWICE to provide a comparative benchmark:
-1. Run a baseline model (model='lr' or 'prophet').
-2. Run an advanced model (model='sarimax' or 'nst').
+1. If a user asks for general information, historical data, or the profile of a client, ALWAYS invoke the `get_client_info` tool first.
+2. If a user requests a forecast, ALWAYS invoke the `run_forecast` tool. Unless specified otherwise, run the tool TWICE to provide a comparative benchmark:
+   - Run a baseline model (model='lr' or 'prophet').
+   - Run an advanced model (model='sarimax' or 'nst').
 
 PARAMETERS:
 - `mode`: Use 'day_ahead' (horizon 24-48h) for operational spot-market queries. Use 'long_term' (horizon 720h+) for hedging/budgeting queries.
-- `client_id`: Must be strictly formatted as MT_XXX (e.g., MT_013, MT_328). Auto-correct user input if necessary.
+- `client_id`: Auto-correct user input (e.g., '13' -> 'MT_013').
 
 RESPONSE FORMAT:
-1. **Executive Summary**: 1-2 sentences summarizing the request.
-2. **Forecast Data**: Use clean Markdown lists/tables to display Total kWh, Average kW, and Peak kW for each model.
-3. **Analyst Interpretation**: 
-   - Explain *why* the models might differ (e.g., NST captures non-linear anomalies better than LR).
-   - Infer the consumer's behavioral profile (e.g., Residential vs. Daytime Business) based on their peak consumption hours.
-
-If a tool returns an error (e.g., "Artifact not found"), gracefully inform the user and suggest an alternative model or mode."""
+- Use clean Markdown lists/tables.
+- Be analytical. If retrieving client info, explain what their "Behavioral Shape" means practically.
+- If providing a forecast, explain *why* the models might differ and infer business insights.
+"""
 
 # Always load environment variables from .env
 load_dotenv()
@@ -102,7 +154,7 @@ def main():
         return
 
     llm = ChatOpenAI(model="gpt-4o-mini", api_key=api_key, temperature=0)
-    tools = [run_forecast]
+    tools = [run_forecast, get_client_info]
     agent = create_react_agent(llm, tools)
 
     chat_history = []
