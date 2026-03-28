@@ -23,7 +23,7 @@ def preprocess_and_split(df_long):
     train = df_model[df_model['Date'].dt.year < 2014].copy()
     test  = df_model[df_model['Date'].dt.year >= 2014].copy()
 
-    weather_cols = ['HDH', 'CDH']
+    weather_cols = ['HDH', 'CDH', 'HDH_lag24h', 'CDH_lag24h', 'HDH_anomaly', 'CDH_anomaly']
     scaler_weather = StandardScaler()
     train[weather_cols] = scaler_weather.fit_transform(train[weather_cols])
     test[weather_cols]  = scaler_weather.transform(test[weather_cols])
@@ -68,10 +68,7 @@ def preprocess_and_split(df_long):
 
     train = train.dropna(subset=['Consumption_Scaled', 'Lag_15min_Scaled', 'Lag_1h_Scaled', 'Lag_24h_Scaled', 'Lag_1week_Scaled', 'Rolling_Mean_4h_Scaled'])
 
-    cols_to_drop = ['Date', 'ClientID', 'DayMonth', 'Consumption', 'Consumption_Scaled',
-                    'Lag_15min', 'Lag_1h', 'Lag_24h', 'Lag_1week', 'Rolling_Mean_4h',
-                    'Lag_15min_Scaled', 'Lag_1h_Scaled', 'Rolling_Mean_4h_Scaled',
-                    'Temp_National_Avg', 'HDH_lag24h', 'CDH_lag24h', 'HDH_anomaly', 'CDH_anomaly']
+    cols_to_drop = ['Date', 'ClientID', 'Consumption', 'Consumption_Scaled', 'Lag_15min', 'Lag_1h', 'Lag_24h', 'Lag_1week', 'Rolling_Mean_4h', 'Lag_15min_Scaled', 'Lag_1h_Scaled', 'Rolling_Mean_4h_Scaled', 'Temp_National_Avg']
 
     cols_to_drop_train = [c for c in cols_to_drop if c in train.columns]
     
@@ -177,9 +174,6 @@ def evaluate_models(test, client_scalers):
 
     return cluster_eval, summary
 
-
-# plot_cluster_portfolio and analyze_time_periods are now imported from
-# src.tools.visualization — no local definitions needed here.
 
 def save_cluster_artifacts(cluster_models, client_scalers, scaler_weather, feature_cols, client_clusters, artifacts_dir="../agent/artifacts"):
     print(f"Saving Cluster Linear Regression artifacts to {artifacts_dir}...")
