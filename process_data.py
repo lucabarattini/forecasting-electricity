@@ -1,4 +1,4 @@
-from src.tools import add_temporal_features, get_national_weather, clean_clients, load_raw_data, add_lags_and_rolling
+from src.tools import add_temporal_features, get_national_weather, clean_clients, load_raw_data, add_lags_and_rolling, apply_profile_clustering, apply_volume_clustering
 import pandas as pd
 import numpy as np
 import os
@@ -49,7 +49,19 @@ def process_data(input_path, output_path):
     # 6. Lags & Rolling
     df_long = add_lags_and_rolling(df_long)
     
-    # 7. Export
+    # 7. Clustering (Shape and Volume)
+    print("Applying Shape & Volume clustering mappings...")
+    
+    df_train = df_long[df_long['Date'].dt.year < 2014].copy()
+    df_test  = df_long[df_long['Date'].dt.year >= 2014].copy()
+
+    df_train, df_test = apply_profile_clustering(df_train, df_test, n_clusters=5)
+    df_train, df_test = apply_volume_clustering(df_train, df_test)
+
+    # Recombine train and test safely
+    df_long = pd.concat([df_train, df_test]).sort_values(by=['ClientID', 'Date']).reset_index(drop=True)
+
+    # 8. Export
     print(f"Exporting to {output_path}...")
     df_long.to_parquet(output_path, index=False)
     print("Done!")
