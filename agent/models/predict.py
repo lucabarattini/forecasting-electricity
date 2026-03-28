@@ -151,7 +151,7 @@ def predict_linear_regression(client_id: str, horizon_hours: int,
             drop_first=True
         )
 
-        weather_cols = ["Temp_National_Avg", "HDH", "CDH"]
+        weather_cols = ["HDH", "CDH"]
         future_model[weather_cols] = scaler_weather.transform(
             future_model[weather_cols].values
         )
