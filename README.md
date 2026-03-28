@@ -1,4 +1,9 @@
-<div align="center">
+# Electricity Load Forecasting with Agentic AI
+
+![Python](https://img.shields.io/badge/Python-3.9%2B-blue?style=flat-square&logo=python)
+![PyTorch](https://img.shields.io/badge/PyTorch-2.0%2B-ee4c2c?style=flat-square&logo=pytorch)
+![LangChain](https://img.shields.io/badge/LangChain-Agentic_AI-green?style=flat-square)
+![License](https://img.shields.io/badge/License-MIT-lightgrey?style=flat-square)
 
 <table border="0" cellspacing="0" cellpadding="12">
 <tr>
@@ -11,126 +16,199 @@
 </tr>
 </table>
 
-<br>
+An end-to-end, production-ready Machine Learning pipeline for forecasting short-term (day-ahead) and long-term electricity consumption across a portfolio of 370 Portuguese clients. 
 
-![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)
-![Python](https://img.shields.io/badge/Python-3.10%2B-blue?style=for-the-badge&logo=python&logoColor=white)
-![scikit-learn](https://img.shields.io/badge/Forecasting-scikit--learn-orange?style=for-the-badge&logo=scikit-learn&logoColor=white)
-![Prophet](https://img.shields.io/badge/Forecasting-Prophet-green?style=for-the-badge)
+This project bridges the gap between complex data science operations and business decision-making by implementing a scalable MLOps architecture, four distinct forecasting models (including a State-of-the-Art Non-Stationary Transformer), and an **LLM-based Agentic Assistant** for natural language querying.
 
-</div>
+---
 
-IEOR 4578 — Electricity load forecasting for 370 Portuguese clients (2011–2015, 15-minute intervals). We preprocess the raw data, cluster clients by consumption behavior, then benchmark three forecasting models on the same 30 clients, same 24-hour test horizon, using MAPE/WMAPE/MAE/RMSE.
+## 📖 Table of Contents
+- [System Architecture](#-system-architecture)
+- [Key Features](#-key-features)
+- [Repository Structure](#-repository-structure)
+- [Getting Started](#-getting-started)
+- [Usage & Pipeline Execution](#-usage--pipeline-execution)
+- [The Agentic AI Layer](#-the-agentic-ai-layer)
+- [Modeling Strategy](#-modeling-strategy)
 
-## Demo
+---
 
-<video src="Images%20%26%20Videos/Forecasting - Demo.mp4" controls width="100%"></video>
+## 🏛 System Architecture
 
-![Demo](<Images%20%26%20Videos/Demo%20Forecasting%20Electricity.gif>)
+The conceptual architecture of the system follows a strict separation of concerns, progressing from raw data ingestion to portfolio evaluation, orchestrated by an intelligent AI layer.
 
-## Graphs
+```mermaid
+graph LR
+    %% Define Node Styles
+    classDef block fill:#ffffff,stroke:#004479,stroke-width:2px,color:#000000,font-weight:bold;
+    classDef model fill:#e6e8ea,stroke:#6e757c,stroke-width:2px,color:#000000,font-weight:bold;
+    classDef agent fill:#fff3e6,stroke:#ffa500,stroke-width:2px,stroke-dasharray: 5 5,color:#000000,font-weight:bold;
+    classDef user fill:#f4f5f6,stroke:#6e757c,stroke-width:1px;
 
-<table>
-<tr>
-    <td><img src="Images%20%26%20Videos/Prophet%20-%201.png" width="100%"></td>
-    <td><img src="Images%20%26%20Videos/Sarimax%20-%201.png" width="100%"></td>
-</tr>
-<tr>
-    <td align="center">Prophet</td>
-    <td align="center">SARIMAX</td>
-</tr>
-</table>
+    %% Nodes
+    User([Business Manager<br>Natural Language]):::user
+    Agent{LLM Agentic Assistant<br>Routing & Orchestration}:::agent
+    
+    Preproc[Data Preprocessing<br>& Clustering]:::block
+    
+    subgraph Forecasting Engine
+        LR[Linear Regression]:::model
+        PR[Facebook Prophet]:::model
+        SX[SARIMAX]:::model
+        NST[NS-Transformer]:::model
+    end
+    
+    Merge[Safe Merge<br>& Predictions]:::block
+    Eval[Portfolio WMAPE<br>Evaluation]:::block
 
-<table>
-<tr>
-    <td><img src="Images%20%26%20Videos/Prophet%20-%202.png" width="100%"></td>
-    <td><img src="Images%20%26%20Videos/Sarimax%20-%202.png" width="100%"></td>
-</tr>
-<tr>
-    <td align="center">Prophet</td>
-    <td align="center">SARIMAX</td>
-</tr>
-</table>
-
-## Repository Structure
-
+    %% Data Flow
+    Preproc ==> LR & PR & SX & NST
+    LR & PR & SX & NST ==> Merge
+    Merge ==> Eval
+    
+    %% User/Agent Interaction
+    User <==>|Query / Response| Agent
+    
+    %% Agent Routing
+    Agent -.->|Model Selection| LR
+    Agent -.->|Model Selection| PR
+    Agent -.->|Model Selection| SX
+    Agent -.->|Model Selection| NST
+    Agent -.->|Retrieve Forecast| Merge
 ```
+
+### Architecture Breakdown
+1. **Data Preprocessing & Clustering:** Centralized ingestion that cleans data, engineers temporal/weather features, and maps clients to specific behavioral (Shape) and volume (Size) clusters.
+2. **Forecasting Engine:** Four parallel modeling architectures (Linear Regression, Prophet, SARIMAX, NS-Transformer) that train dynamically based on the behavioral clusters.
+3. **Safe Merge & Evaluation:** Predictions are safely un-scaled and merged back to the individual client level to calculate the Portfolio WMAPE (Weighted Mean Absolute Percentage Error).
+4. **Agentic Orchestration:** An LLM-powered layer that abstracts backend complexity. It interprets business queries, selects the appropriate model artifact, executes inference, and provides analytical insights.
+
+---
+
+## ✨ Key Features
+
+* **Dual-Mode Forecasting:** Supports `day_ahead` (operational spot-market trading) and `long_term` (financial hedging and budgetary planning) modes.
+* **Cluster-Aware Inference:** Models are trained on aggregated behavioral clusters (K-Means) rather than 370 individual noise-heavy time series, drastically improving robustness and computational efficiency.
+* **Advanced Feature Engineering:** Integrates Population-weighted Heating/Cooling Degree Hours (HDH/CDH), Weather Anomalies, recursive Autoregressive Lags (24h, 1-week), and dynamic holiday handling (accounting for the Portuguese "Troika" austerity period).
+* **State-of-the-Art Deep Learning:** Implements the Non-Stationary Transformer (NeurIPS 2022) with De-stationary Attention mechanisms (`tau` and `delta` learners) using PyTorch.
+* **Agentic CLI Interface:** A LangGraph/OpenAI-powered conversational agent that dynamically routes queries and interprets energy peaks.
+
+---
+
+## 📂 Repository Structure
+
+To ensure scalability and maintainability, the repository follows modern MLOps best practices:
+
+```text
 forecasting-electricity/
-├── Datasets/
-│   ├── Electricity Dataset.csv                 # Raw data (370 clients × 140k timestamps)
-│   ├── processed_electricity_data.parquet      # Output of notebook 0
-│   ├── client_clusters.csv                     # Output of notebook 0.5
-│   └── client_size_categories.csv
 │
-├── notebooks/
-│   ├── 0_data_preprocessing.ipynb
-│   ├── 0.5_clustering.ipynb
-│   ├── 1_linear_regression.ipynb
-│   ├── 2_Prophet.ipynb
-│   └── 3_sarimax.ipynb
+├── agent/                      # Production inference layer
+│   ├── artifacts/              # Serialized models, state_dicts, and scalers (*.pkl)
+│   ├── inference/predict.py    # Robust PyTorch/Statsmodels inference engine
+│   └── chatbot.py              # LLM conversational interface (CLI)
 │
-├── requirements.txt
-└── README.md
+├── Datasets/                   # Raw and processed datasets
+│
+├── notebooks/                  # Interactive playgrounds for EDA and Benchmarking
+│
+├── scripts/                    # Executable automation scripts (Batch mode)
+│   ├── process_data.py         # End-to-end data pipeline runner
+│   └── split_and_cluster.py
+│
+├── src/                        # Core mathematical and utility logic (The Engine)
+│   ├── models/                 # Unified API for LR, Prophet, SARIMAX, and NST
+│   └── tools/                  # Data loaders, feature engineers, cleaning, evaluation
+│
+├── requirements.txt            # Project dependencies
+└── README.md                   
 ```
 
-## Notebooks
+---
 
-**0: Preprocessing**
-Reshapes raw data from wide (370 columns) to long format. Adds temporal features (hour, weekday, holiday), fetches historical weather from Open-Meteo for 4 Portuguese cities (population-weighted average), engineers HDH/CDH from an 18°C comfort threshold, creates lag and rolling features (15min, 24h, 4h rolling mean), trims leading zeros for clients that joined the grid late.
+## 🚀 Getting Started
 
-**0.5: Clustering**
-K-Means (k=5) on normalized 24-hour consumption profiles. Normalization is per-client (Min-Max row-wise) so the algorithm groups by shape, not volume. Produces 5 behavioral clusters (night-shift industrial, daytime commercial, late-evening residential, siesta-split, general commercial) used to break down model performance.
+### 1. Prerequisites
+- Python 3.9+
+- Git
 
-**1: Linear Regression**
-Baseline model. One global model trained on all 30 clients combined. Lag/rolling features are recomputed per-client on standardized consumption to prevent scale leakage. Evaluation uses recursive forecasting (model predictions feed back as lag inputs). Metrics are reported in raw kW via per-client inverse transform.
-
-**2: Prophet**
-One model per client. Meta's Prophet with Portuguese holidays, temperature regressor, and lag/rolling regressors. `daily_seasonality=False` because the lag regressors already encode the daily consumption shape — having Prophet also model it via Fourier terms was double-counting and pushing the trend component off. `changepoint_prior_scale=0.15` for more flexible trend. Predictions clipped at 0. Set `DEBUG_MODE = True` to run on 3 clients (~2 min) for fast iteration.
-
-**3: SARIMAX**
-One model per client. SARIMAX(1,0,1)(1,0,1,96) on a 4-week training window. Parameters selected manually from ACF/PACF plots. `Hour` removed from exogenous variables since the seasonal component (s=96) already captures the daily pattern and treating hour as linear (1–24) was misleading the model. Set `DEBUG_MODE = True` to run on 3 clients for fast iteration.
-
-## A note on the test window
-
-All three models are evaluated on the same 24-hour holdout: Dec 31, 2014 (New Year's Eve). This is an atypical day, so the reported metrics reflect performance on a single difficult day rather than general accuracy.
-
-## Running
+### 2. Installation
+Clone the repository and install the dependencies:
 
 ```bash
-python -m venv .venv
-source .venv/bin/activate
+git clone [https://github.com/yourusername/forecasting-electricity.git](https://github.com/yourusername/forecasting-electricity.git)
+cd forecasting-electricity
+
+# Create a virtual environment (recommended)
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install dependencies
 pip install -r requirements.txt
 ```
 
-Run notebooks in order (0 → 0.5 → 1/2/3). Notebook 0 fetches weather from the Open-Meteo API and outputs the parquet file that all model notebooks depend on.
+### 3. Environment Variables
+To use the Agentic Chatbot, you need an OpenAI API key. Create a `.env` file in the root directory:
 
-## Evaluation
+```env
+OPENAI_KEY=your_openai_api_key_here
+```
 
-All models use the same 30 clients (`random.seed(42)`), same 96-step (24-hour) holdout, metrics in raw kW. Primary metric is **MAPE** (scale-free, comparable across clients of very different sizes). Performance is broken down by behavioral cluster for all three models.
+---
 
-## Forecasting Agent
+## ⚙️ Usage & Pipeline Execution
 
-We built a terminal chatbot using LangChain and a Groq-hosted LLM (Llama 3.3 70B).
+### Step 1: Data Preprocessing
+Generate the ML-ready Parquet dataset. This script handles wide-to-long melting, missing value trimming, weather API fetching, lag generation, and K-Means clustering.
 
-The agent allows users to query electricity consumption forecasts in plain English. Given a client ID and a forecast horizon, it automatically calls the models, runs recursive predictions at 15-minute resolution starting from 2015-01-01, and returns the results for each model.
-
-### Structure
-
-- `agent/train_and_save.py` — trains all three models (LR, Prophet, SARIMAX) per client and saves them as artifacts to disk. Run once before using the chatbot.
-- `agent/models/predict.py` — inference module that loads saved artifacts and runs predictions for a given client and horizon.
-- `agent/chatbot.py` — LangChain agent with a natural language interface. Parses user messages, calls the forecasting tools, and returns results.
-
-### Usage
 ```bash
-cd agent
-pip install -r requirements_agent.txt
-python train_and_save.py --clients MT_001 MT_315
-python chatbot.py
+python scripts/process_data.py
+```
+*Output:* `Datasets/processed_electricity_data.parquet` (approx. 41.9M rows).
+
+### Step 2: Train Models & Generate Artifacts
+Run the desired modeling notebook or scripts. Each model implements a `save_artifacts` function that outputs the necessary `.pkl` files (scalers, regressors, and model states) into the `agent/artifacts/` directory.
+
+
+### Step 3: Run the Agentic Assistant
+Interact with the models via the natural language terminal interface.
+
+```bash
+python agent/chatbot.py
 ```
 
-Example query:
-```
-I want the forecast for client 315 for a 24-hour horizon
-```
+---
 
-Demo YouTube link: https://youtu.be/2cXAN4B30EQ
+## 🤖 The Agentic AI Layer
+
+The `chatbot.py` script acts as a smart orchestrator. It allows non-technical business managers to query complex models without writing code.
+
+**Example Interaction:**
+```text
+You: Forecast MT_013 for tomorrow using the baseline and the Transformer.
+
+Agent:
+Here are the electricity consumption forecasts for client MT_013 for the next 24 hours:
+
+### Linear Regression (Baseline)
+- Total Consumption: 2402.97 kWh
+- Average Power: 50.06 kW
+- Peak Power: 95.99 kW at 15:15
+
+### Non-Stationary Transformer (NST)
+- Total Consumption: 2788.32 kWh
+- Average Power: 58.09 kW
+- Peak Power: 86.44 kW at 12:00
+
+Analyst Interpretation:
+The NST model captures non-linear anomalies better than the baseline, predicting a higher overall volume and an earlier peak. The noon peak indicates this client operates primarily as a standard daytime business.
+```
+*Under the hood, the inference engine (`predict.py`) dynamically reconstructs PyTorch tensors using the last 168 hours of the client's actual history to feed the Transformer.*
+
+---
+
+## 📈 Modeling Strategy
+
+1. **Linear Regression (Baseline):** A highly interpretable autoregressive baseline utilizing dummy variables for temporal states.
+2. **Facebook Prophet:** Specialized in capturing strong additive multi-seasonality (daily, weekly, yearly).
+3. **SARIMAX:** A stochastic autoregressive model handling complex residuals and exogenous weather dependencies.
+4. **Non-Stationary Transformer (NST):** A deep learning architecture that tackles the inherent non-stationarity of energy markets. It utilizes Projector networks (`tau` and `delta` learners) to de-stationarize the inputs before attention calculation, significantly outperforming traditional models on volatile clients.
