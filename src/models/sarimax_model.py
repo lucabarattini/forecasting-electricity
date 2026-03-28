@@ -48,6 +48,12 @@ def preprocess_and_split(df_long, mode='long_term'):
     # 1. Train/Test Split (2014 threshold)
     train_raw = df_long[df_long['Date'].dt.year < 2014].copy()
     test_raw  = df_long[df_long['Date'].dt.year >= 2014].copy()
+
+    # Ensure boolean flags are numerical for statsmodels
+    train_raw['Is_Weekend'] = train_raw['Is_Weekend'].astype(np.float32)
+    train_raw['Is_Holiday'] = train_raw['Is_Holiday'].astype(np.float32)
+    test_raw['Is_Weekend'] = test_raw['Is_Weekend'].astype(np.float32)
+    test_raw['Is_Holiday'] = test_raw['Is_Holiday'].astype(np.float32)
     
     # 2. Weather Scaling
     weather_cols = ['HDH', 'CDH', 'HDH_lag24h', 'CDH_lag24h', 'HDH_anomaly', 'CDH_anomaly']
@@ -141,18 +147,17 @@ def train_models(train_agg, regressors):
 
     for cluster_id in tqdm(unique_clusters, desc="Training"):
         df_cluster = train_agg[train_agg['Cluster'] == cluster_id].set_index('Date')
+
+        df_cluster = df_cluster.resample('1h').mean().ffill()
         
-        # Define endog and exog
-        endog = df_cluster['Consumption_Scaled']
-        exog = df_cluster[regressors]
+        endog = df_cluster['Consumption_Scaled'].astype(np.float64)
+        exog = df_cluster[regressors].astype(np.float64)
         
-        # SARIMAX model definition
-        # d=1 for stationarity, s=24 for hourly/daily seasonality
         model = SARIMAX(
-            endog,
+            endog=endog,
             exog=exog,
             order=(1, 1, 1),
-            seasonal_order=(1, 1, 1, 24),
+            seasonal_order=(1, 0, 1, 24), 
             enforce_stationarity=False,
             enforce_invertibility=False
         )
@@ -171,23 +176,28 @@ def predict_models(cluster_models, test_agg, test_raw, client_scalers, regressor
     
     all_cluster_forecasts = []
     
-    for cluster_id, model in cluster_models.items():
+    for cluster_id, results in cluster_models.items():
         df_test_c = test_agg[test_agg['Cluster'] == cluster_id].set_index('Date')
         
         if len(df_test_c) > 0:
-            exog_test = df_test_c[regressors]
-            forecast = model.get_forecast(steps=len(df_test_c), exog=exog_test)
-            
-            fcst_df = pd.DataFrame({
-                'Cluster': cluster_id,
-                'Date': df_test_c.index,
-                'Predicted_Consumption_Scaled': forecast.predicted_mean.values
-            })
-            all_cluster_forecasts.append(fcst_df)
+            df_test_hourly = df_test_c.resample('1h').mean().ffill()
 
-    global_forecasts = pd.concat(all_cluster_forecasts, ignore_index=True)
+            exog_test = df_test_hourly[regressors].astype(np.float64)
+            
+            forecast = results.get_forecast(steps=len(df_test_hourly), exog=exog_test)
+            
+            fcst_hourly = pd.DataFrame({
+                'Cluster': cluster_id,
+                'Date': df_test_hourly.index,
+                'Predicted_Consumption_Scaled': forecast.predicted_mean.values
+            }).set_index('Date')
+            
+            fcst_15min = fcst_hourly.resample('15min').ffill().reset_index()
+            
+            all_cluster_forecasts.append(fcst_15min)
 
     # 2. Safe Merge to Individual Clients
+    global_forecasts = pd.concat(all_cluster_forecasts, ignore_index=True)
     test_raw = test_raw.drop(columns=['Predicted_Consumption_Scaled'], errors='ignore')
     test_raw = test_raw.merge(global_forecasts, on=['Cluster', 'Date'], how='left')
     
