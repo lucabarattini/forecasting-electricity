@@ -481,6 +481,11 @@ def predict_models(cluster_models, train_agg, test_agg, test_raw, client_scalers
             all_cluster_forecasts.append(fcst_15min)
             
     global_forecasts = pd.concat(all_cluster_forecasts, ignore_index=True)
+    
+    # Allineamento tipi per il merge (Cluster deve essere dello stesso tipo)
+    test_raw['Cluster'] = test_raw['Cluster'].astype(float)
+    global_forecasts['Cluster'] = global_forecasts['Cluster'].astype(float)
+    
     test_raw = test_raw.drop(columns=['Predicted_Consumption_Scaled'], errors='ignore')
     test_raw = test_raw.merge(global_forecasts, on=['Cluster', 'Date'], how='left')
     
@@ -493,17 +498,32 @@ def predict_models(cluster_models, train_agg, test_agg, test_raw, client_scalers
             scaler = client_scalers[client]
             preds_scaled = test_raw.loc[mask, 'Predicted_Consumption_Scaled'].values.reshape(-1, 1)
             
-            # Se abbiamo previsioni valide, procediamo con l'inverse scaling
-            if not np.isnan(preds_scaled).any():
-                unscaled = scaler.inverse_transform(preds_scaled).flatten()
-                test_raw.loc[mask, 'Predicted_kW'] = np.maximum(unscaled, 0)
+            # CORREZIONE: Gestione flessibile dei NaN - non scartiamo l'intero cliente
+            nan_mask = np.isnan(preds_scaled).flatten()
+            if not nan_mask.all():
+                # Prepariamo un array di output
+                unscaled_full = np.full(preds_scaled.shape, np.nan)
+                valid_idx = ~nan_mask
+                
+                # Applichiamo inverse_transform solo sui dati validi
+                unscaled_valid = scaler.inverse_transform(preds_scaled[valid_idx]).flatten()
+                unscaled_full[valid_idx, 0] = unscaled_valid
+                
+                test_raw.loc[mask, 'Predicted_kW'] = np.maximum(unscaled_full.flatten(), 0)
                 
     return test_raw
 
 def evaluate_models(test_raw):
     print("\nEvaluating Portfolio Performance...")
+    
+    # Controllo di resilienza: se non ci sono previsioni, evitiamo il crash
+    valid_data = test_raw.dropna(subset=['Actual_kW', 'Predicted_kW'])
+    if valid_data.empty:
+        print("WARNING: No valid predictions found to evaluate. Portfolio metrics will be empty.")
+        return pd.DataFrame(), pd.DataFrame()
+        
     portfolio_eval = (
-        test_raw.dropna(subset=['Actual_kW', 'Predicted_kW'])
+        valid_data
         .groupby(['Cluster', 'Date'], observed=True)[['Actual_kW', 'Predicted_kW']]
         .sum()
         .reset_index()
