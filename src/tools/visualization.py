@@ -61,7 +61,7 @@ def plot_cluster_portfolio(
         ax.plot(
             c_plot["Date"].values[plot_slice:],
             c_plot["Predicted_kW"].values[plot_slice:],
-            label=f"{model_label} (Day-Ahead)",
+            label=f"{model_label}",
             color="tomato",
             linestyle="--",
             alpha=0.9,
