@@ -140,7 +140,7 @@ def train_models(train_agg, regressors):
             uncertainty_samples=0, 
             daily_seasonality=False
         )
-        m.add_seasonality(name='daily', period=1, fourier_order=10) 
+        m.add_seasonality(name='daily', period=1, fourier_order=15) 
         m.add_country_holidays(country_name='PT')
         
         for reg in regressors:

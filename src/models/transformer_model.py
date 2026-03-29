@@ -34,7 +34,6 @@ if PROJECT_ROOT not in sys.path:
 
 from src.tools.evaluation import compute_cluster_metrics
 from src.tools.visualization import plot_cluster_portfolio, analyze_time_periods
-
 # =============================================================
 # DEVICE DETECTION
 # =============================================================
@@ -515,8 +514,7 @@ def predict_models(cluster_models, train_agg, test_agg, test_raw, client_scalers
 
 def evaluate_models(test_raw):
     print("\nEvaluating Portfolio Performance...")
-    
-    # Controllo di resilienza: se non ci sono previsioni, evitiamo il crash
+
     valid_data = test_raw.dropna(subset=['Actual_kW', 'Predicted_kW'])
     if valid_data.empty:
         print("WARNING: No valid predictions found to evaluate. Portfolio metrics will be empty.")
@@ -528,12 +526,7 @@ def evaluate_models(test_raw):
         .sum()
         .reset_index()
     )
-    portfolio_eval['Abs_Error'] = np.abs(portfolio_eval['Actual_kW'] - portfolio_eval['Predicted_kW'])
-    mask_nonzero = portfolio_eval['Actual_kW'] > 0.1
-    portfolio_eval.loc[mask_nonzero, 'Perc_Error'] = (
-        portfolio_eval.loc[mask_nonzero, 'Abs_Error'] / portfolio_eval.loc[mask_nonzero, 'Actual_kW']
-    ) * 100
-    
+
     summary = compute_cluster_metrics(portfolio_eval)
 
     return portfolio_eval, summary
