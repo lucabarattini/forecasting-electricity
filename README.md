@@ -8,10 +8,10 @@
 <table border="0" cellspacing="0" cellpadding="12">
 <tr>
   <td align="center" width="50%">
-    <img src="Images%20%26%20Videos/Logo.png" width="100%" alt="Logo">
+    <img src="Images/Logo.png" width="100%" alt="Logo">
   </td>
   <td align="center" width="50%">
-    <img src="Images%20%26%20Videos/Team%20-%20Thumbnail.png" width="100%" alt="Team">
+    <img src="Images/Team%20-%20Thumbnail.png" width="100%" alt="Team">
   </td>
 </tr>
 </table>
@@ -183,26 +183,7 @@ python agent/chatbot.py
 The `chatbot.py` script acts as a smart orchestrator. It allows non-technical business managers to query complex models without writing code.
 
 **Example Interaction:**
-```text
-You: Forecast MT_013 for tomorrow using the baseline and the Transformer.
-
-Agent:
-Here are the electricity consumption forecasts for client MT_013 for the next 24 hours:
-
-### Linear Regression (Baseline)
-- Total Consumption: 2402.97 kWh
-- Average Power: 50.06 kW
-- Peak Power: 95.99 kW at 15:15
-
-### Non-Stationary Transformer (NST)
-- Total Consumption: 2788.32 kWh
-- Average Power: 58.09 kW
-- Peak Power: 86.44 kW at 12:00
-
-Analyst Interpretation:
-The NST model captures non-linear anomalies better than the baseline, predicting a higher overall volume and an earlier peak. The noon peak indicates this client operates primarily as a standard daytime business.
-```
-*Under the hood, the inference engine (`predict.py`) dynamically reconstructs PyTorch tensors using the last 168 hours of the client's actual history to feed the Transformer.*
+<img src="Images/screenshot.png" width="100%" alt="Logo">
 
 ---
 
