@@ -183,7 +183,7 @@ python agent/chatbot.py
 The `chatbot.py` script acts as a smart orchestrator. It allows non-technical business managers to query complex models without writing code.
 
 **Example Interaction:**
-<img src="Images/screenshot.png" width="100%" alt="Logo">
+<img src="Images/Screenshot.png" width="100%" alt="Logo">
 
 ---
 
