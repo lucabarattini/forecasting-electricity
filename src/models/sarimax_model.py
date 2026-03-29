@@ -20,6 +20,7 @@ from sklearn.preprocessing import StandardScaler
 from tqdm import tqdm
 import joblib
 import warnings
+from src.tools.evaluation import compute_cluster_metrics
 
 # Suppress statsmodels warnings for cleaner output
 warnings.filterwarnings("ignore")
@@ -159,7 +160,8 @@ def train_models(train_agg, regressors):
             order=(1, 1, 1),
             seasonal_order=(1, 0, 1, 24), 
             enforce_stationarity=False,
-            enforce_invertibility=False
+            enforce_invertibility=False,
+            low_memory=True
         )
         
         results = model.fit(disp=False)
@@ -202,20 +204,21 @@ def predict_models(cluster_models, test_agg, test_raw, client_scalers, regressor
     test_raw = test_raw.merge(global_forecasts, on=['Cluster', 'Date'], how='left')
     
     # 3. Inverse Scaling
+    test_raw['Actual_kW'] = test_raw['Consumption'] # Spostato fuori (operazione vettoriale veloce)
     test_raw['Predicted_kW'] = np.nan
+    
     for client in tqdm(test_raw['ClientID'].unique(), desc="Un-scaling Clients"):
         mask = test_raw['ClientID'] == client
         if mask.any() and client in client_scalers:
             scaler = client_scalers[client]
             preds_scaled = test_raw.loc[mask, 'Predicted_Consumption_Scaled'].values.reshape(-1, 1)
             
-            # Handle potential NaNs in predictions (if merge failed)
-            if np.isnan(preds_scaled).all():
+            # Filtro rapido per evitare di processare blocchi di soli NaN
+            if pd.isna(preds_scaled).all():
                 continue
                 
             unscaled = scaler.inverse_transform(preds_scaled).flatten()
             test_raw.loc[mask, 'Predicted_kW'] = np.maximum(unscaled, 0)
-            test_raw.loc[mask, 'Actual_kW'] = test_raw.loc[mask, 'Consumption']
                 
     return test_raw
 
@@ -226,24 +229,17 @@ def evaluate_models(test_raw):
     """
     print("\nEvaluating Portfolio Performance...")
     
-    # Portfolio aggregation by datetime
     portfolio_eval = (
         test_raw.dropna(subset=['Actual_kW', 'Predicted_kW'])
         .groupby(['Cluster', 'Date'], observed=True)[['Actual_kW', 'Predicted_kW']]
         .sum()
         .reset_index()
     )
-    
-    # Error calculations
-    portfolio_eval['Abs_Error'] = np.abs(portfolio_eval['Actual_kW'] - portfolio_eval['Predicted_kW'])
-    mask_nonzero = portfolio_eval['Actual_kW'] > 0.1
-    portfolio_eval.loc[mask_nonzero, 'Perc_Error'] = (
-        portfolio_eval.loc[mask_nonzero, 'Abs_Error'] / portfolio_eval.loc[mask_nonzero, 'Actual_kW']
-    ) * 100
 
     summary = compute_cluster_metrics(portfolio_eval)
 
     return portfolio_eval, summary
+    
 
 def save_sarimax_artifacts(cluster_models, client_scalers, scaler_weather, regressors, mode, artifacts_dir=None):
     """Saves the models and scalers for future production inference."""

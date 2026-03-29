@@ -116,7 +116,18 @@ def _get_future_features(client_id: str, horizon_hours: int, df_all: pd.DataFram
     
     mirror = mirror.iloc[:n_steps].copy()
     mirror.index = future_ts
+    
+    if "Hour" in mirror.columns:
+        mirror['Hour'] = mirror.index.hour
+    if "Weekday" in mirror.columns:
+        mirror['Weekday'] = mirror.index.weekday
+    if "Month" in mirror.columns:
+        mirror['Month'] = mirror.index.month
+    if "Is_Weekend" in mirror.columns:
+        mirror['Is_Weekend'] = (mirror['Weekday'] >= 5).astype(float)
+     
     return mirror
+
 
 def _align_features(df: pd.DataFrame, expected_cols: List[str], target_scaler: Any = None) -> pd.DataFrame:
     """Performs dummification and scaling to align with model expectations."""
@@ -277,20 +288,9 @@ def predict_power(client_id: str, model_name: str, mode: str, df_all: pd.DataFra
                 preds_scaled = forecast['yhat'].values
                 
             elif model_name == 'sarimax':
-                try:
-                    # Try forecasting natively (passing numpy array avoids Pandas index conflicts)
-                    preds_scaled = model_obj.forecast(steps=len(future_ts), exog=exog_df.values).values
-                except ValueError as e:
-                    # Fallback: Model was trained on HOURLY data, but we passed 15-min length
-                    if "shape" in str(e).lower() or "exog" in str(e).lower():
-                        # Resample exogenous data to hourly
-                        exog_hourly = exog_df.groupby(np.arange(len(exog_df)) // 4).mean().values
-                        # Forecast hourly
-                        preds_scaled_1h = model_obj.forecast(steps=len(exog_hourly), exog=exog_hourly).values
-                        # Upsample back to 15-min to match future_ts length
-                        preds_scaled = np.repeat(preds_scaled_1h, 4)[:len(future_ts)]
-                    else:
-                        raise e
+                exog_hourly = exog_df.groupby(np.arange(len(exog_df)) // 4).mean().values
+                preds_scaled_1h = model_obj.forecast(steps=horizon_hours, exog=exog_hourly).values
+                preds_scaled = np.repeat(preds_scaled_1h, 4)[:len(future_ts)]
         else:
             raise ValueError(f"Unknown model: {model_name}")
 
